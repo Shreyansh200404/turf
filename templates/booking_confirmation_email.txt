@@ -1,0 +1,33 @@
+The SK Sports Park - Turf Booking Confirmation
+
+Dear {{ name }},
+
+Thank you for choosing The SK Sports Park! Your turf reservation has been successfully confirmed.
+
+BOOKING REFERENCE: {{ payment_id }}
+
+BOOKING DETAILS
+--------------
+Booking Date: {{ selected_date }}
+Time Slots: {% for slot in slots %}{{ slot }}{% if not forloop.last %}, {% endif %}{% endfor %}
+Amount Paid: ₹{{ amount }}
+Payment Method: {{ payment_method }}
+Venue: The SK Sports Park
+Booking made on: {{ current_date }} at {{ booking_time }}
+
+IMPORTANT INFORMATION
+-------------------
+* Please arrive 10 minutes before your scheduled time slot
+* Bring your own sports equipment (if required)
+* Wear appropriate sports footwear
+* Keep this email as proof of your booking
+* In case of any issues, quote your booking reference: {{ payment_id }}
+
+We're excited to have you at The SK Sports Park! If you need to make any changes to your booking or have questions, please contact us with your booking reference number.
+
+Best Regards,
+The SK Sports Park Team
+
+---
+This is an automated confirmation email. Please do not reply to this email.
+For support, please contact us through our website or call our support line. 

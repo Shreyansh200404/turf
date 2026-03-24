@@ -1,0 +1,489 @@
+{% load static %}
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta http-equiv="X-UA-Compatible" content="IE=edge" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <link rel="stylesheet" href="{% static 'css/mainpage_style.css' %}" />
+    <!--<link rel="shortcut icon" type="image/jpg" href="../static/images/favicon.ico"/>
+    <meta name="title" property="og:title" content="SurfTheTurf"/>
+    <meta name="type" property="og:type" content="website"/>
+    <meta name="url" property="og:url" content="https://surftheturf.herokuapp.com/"/>
+    <meta name="image" property="og:image" content="https://raw.githubusercontent.com/parthd06/SurfTheTurf/main/Extras/Screenshots/surftheturfbanner.png">-->
+    <title>{{ turf.name }} - Book Your Sports Turf</title>
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0-alpha1/dist/css/bootstrap.min.css" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css">
+    <style>
+      @import url("https://fonts.googleapis.com/css2?family=Poppins:wght@200;300;400;500;600;700;800&display=swap");
+
+      * {
+        box-sizing: border-box;
+        margin: 0;
+        padding: 0;
+        font-family: "Poppins", sans-serif;
+      }
+
+      .showcase {
+        position: absolute;
+        right: 0;
+        width: 100%;
+        min-height: 100vh;
+        padding: 100px;
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        background: #111;
+        color: #fff;
+        z-index: 2;
+        transition: 0.5s;
+      }
+
+      .showcase.active {
+        right: 300px;
+      }
+
+      .showcase header {
+        position: absolute;
+        top: 0;
+        left: 0;
+        width: 100%;
+        padding: 40px 100px;
+        z-index: 1000;
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+      }
+
+      .logo {
+        text-transform: uppercase;
+        cursor: pointer;
+      }
+
+      .toggle {
+        position: relative;
+        width: 60px;
+        height: 60px;
+        background: url("../static/images/menu.png");
+        background-repeat: no-repeat;
+        background-size: 30px;
+        background-position: center;
+        cursor: pointer;
+      }
+
+      .toggle.active {
+        background: url("../static/images/close.png");
+        background-repeat: no-repeat;
+        background-size: 25px;
+        background-position: center;
+      }
+
+      .showcase video {
+        position: absolute;
+        top: 0;
+        left: 0;
+        width: 100%;
+        height: 100%;
+        object-fit: cover;
+        opacity: 0.8;
+      }
+
+      .overlay {
+        position: absolute;
+        top: 0;
+        left: 0;
+        width: 100%;
+        height: 100%;
+        background: #4f4c4d;
+        mix-blend-mode: overlay;
+      }
+
+      .text {
+        position: relative;
+        z-index: 10;
+      }
+
+      .text h2 {
+        font-size: 5em;
+        font-weight: 800;
+        line-height: 1em;
+        text-transform: uppercase;
+      }
+
+      .text h3 {
+        font-size: 4em;
+        font-weight: 700;
+        line-height: 1em;
+        text-transform: uppercase;
+      }
+
+      .text p {
+        font-size: 1.1em;
+        margin: 20px 0;
+        font-weight: 400;
+        max-width: 700px;
+      }
+
+      .text a {
+        display: inline-block;
+        font-size: 1em;
+        background: #fff;
+        padding: 10px 30px;
+        text-decoration: none;
+        color: #111;
+        margin-top: 10px;
+        text-transform: uppercase;
+        letter-spacing: 2px;
+        transition: 0.2s;
+      }
+
+      .text a:hover {
+        letter-spacing: 6px;
+      }
+
+      .social {
+        position: absolute;
+        bottom: 20px;
+        z-index: 10;
+        display: flex;
+        justify-content: center;
+        align-items: center;
+      }
+
+      .social li {
+        list-style: none;
+      }
+
+      .social li a {
+        display: inline-block;
+        margin-right: 20px;
+        transform: scale(0.5);
+        transition: 0.5s;
+      }
+
+      .social li a:hover {
+        transform: scale(0.5) translateY(-15px);
+      }
+
+      .menu {
+        position: absolute;
+        top: 0;
+        right: 0;
+        width: 300px;
+        height: 100%;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+      }
+
+      .menu ul {
+        position: relative;
+        list-style: none;
+      }
+
+      .menu ul li a {
+        text-decoration: none;
+        font-size: 24px;
+        color: #111;
+      }
+
+      .menu ul li a:hover {
+        color: #03a9f4;
+      }
+      @media (max-width: 798px) {
+        .showcase,
+        .showcase header {
+          padding: 40px;
+        }
+
+        .text h2 {
+          font-size: 3em;
+        }
+
+        .text h3 {
+          font-size: 2em;
+        }
+      }
+
+      .hero-section {
+        position: relative;
+        height: 100vh;
+        width: 100%;
+        overflow: hidden;
+        background-color: #000;
+        margin: 0;
+        padding: 0;
+      }
+
+      .hero-video {
+        position: absolute;
+        top: 50%;
+        left: 50%;
+        min-width: 100%;
+        min-height: 100%;
+        width: auto;
+        height: auto;
+        transform: translate(-50%, -50%);
+        object-fit: cover;
+        opacity: 1;
+        z-index: 0;
+      }
+      .hero-overlay {
+        position: absolute;
+        top: 0;
+        left: 0;
+        width: 100%;
+        height: 100%;
+        background-color: rgba(0, 0, 0, 0.3);
+        z-index: 1;
+      }
+      .hero-content {
+        position: relative;
+        z-index: 2;
+        height: 100%;
+        display: flex;
+        flex-direction: column;
+        justify-content: center;
+        align-items: center;
+        color: white;
+        text-shadow: 2px 2px 4px rgba(0,0,0,0.5);
+      }
+      .feature-card {
+        border-radius: 10px;
+        transition: transform 0.3s;
+        height: 100%;
+      }
+      .feature-card:hover {
+        transform: translateY(-10px);
+      }
+      .feature-icon {
+        font-size: 3rem;
+        color: #28a745;
+        margin-bottom: 1rem;
+      }
+    </style>
+  </head>
+  <body>
+    <!-- Navigation-->
+    <nav class="navbar navbar-expand-lg navbar-dark bg-dark fixed-top">
+      <div class="container">
+        <a class="navbar-brand" href="/">{{ turf.name }}</a>
+        <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#navbarSupportedContent" aria-controls="navbarSupportedContent" aria-expanded="false" aria-label="Toggle navigation">
+          <span class="navbar-toggler-icon"></span>
+        </button>
+        <div class="collapse navbar-collapse" id="navbarSupportedContent">
+          <ul class="navbar-nav me-auto mb-2 mb-lg-0">
+            <li class="nav-item">
+              <a class="nav-link active" aria-current="page" href="/">Home</a>
+            </li>
+            <li class="nav-item">
+              <a class="nav-link" href="#about-section" id="about-link">About Us</a>
+            </li>
+            <li class="nav-item">
+              <a class="nav-link" href="{% url 'book_now' %}">Book Now</a>
+            </li>
+          </ul>
+          <div class="d-flex">
+            {% if user.is_authenticated %}
+            <div class="dropdown">
+              <button class="btn btn-light dropdown-toggle" type="button" id="userDropdown" data-bs-toggle="dropdown" aria-expanded="false">
+                <i class="fas fa-user-circle me-2"></i>{{ username }}
+              </button>
+              <ul class="dropdown-menu" aria-labelledby="userDropdown">
+                <li><a class="dropdown-item" href="{% url 'orderHistory' %}">My Bookings</a></li>
+                {% if user.is_staff %}
+                <li><a class="dropdown-item" href="{% url 'owner_dashboard' %}">Dashboard</a></li>
+                {% endif %}
+                <li><hr class="dropdown-divider"></li>
+                <li><a class="dropdown-item" href="{% url 'logout' %}">Logout</a></li>
+              </ul>
+            </div>
+            {% else %}
+            <a href="{% url 'owner_login' %}" class="btn btn-outline-secondary me-2">Owner</a>
+            <a href="{% url 'login' %}" class="btn btn-outline-light me-2">Login</a>
+            <a href="{% url 'signup' %}" class="btn btn-success">Sign Up</a>
+            {% endif %}
+          </div>
+        </div>
+      </div>
+    </nav>
+
+    <!-- Hero Section -->
+    <section class="hero-section">
+      <video autoplay muted loop playsinline class="hero-video" id="bgVideo">
+        <source src="{% static 'images/video.mp4' %}" type="video/mp4" />
+        Your browser does not support the video tag.
+      </video>
+      <div class="hero-overlay"></div>
+      <div class="container hero-content">
+        <h1 class="display-3 fw-bold mb-4">{{ turf.name }}</h1>
+        <p class="lead mb-5">Experience the ultimate sports turf - Book your slots today!</p>
+        <a href="{% url 'book_now' %}" class="btn btn-success btn-lg px-5 py-3">Book Now</a>
+      </div>
+    </section>
+
+    <!-- About Turf Section -->
+    <section class="py-5 bg-light" id="about-section">
+      <div class="container">
+        <div class="row align-items-center">
+          <div class="col-md-6">
+            <h2 class="fw-bold mb-4">About {{ turf.name }}</h2>
+            <p class="lead mb-4">Welcome to SK Sports Turf, the premier destination for sports enthusiasts in the region. Established in 2018, we've been providing top-quality turf facilities for football, cricket, and other sports to players of all skill levels.</p>
+            <p class="mb-4">Our state-of-the-art facility is designed to offer the best playing experience with professionally maintained artificial turf that meets international standards. Whether you're organizing a competitive match, casual game with friends, or training session, SK Sports Turf provides the perfect environment.</p>
+            <ul class="list-unstyled">
+              <li class="mb-2"><i class="fas fa-check-circle text-success me-2"></i> Artificial grass with shock-absorbing technology</li>
+              <li class="mb-2"><i class="fas fa-check-circle text-success me-2"></i> Modern changing rooms with shower facilities</li>
+              <li class="mb-2"><i class="fas fa-check-circle text-success me-2"></i> Ample parking space for 25+ vehicles</li>
+              <li class="mb-2"><i class="fas fa-check-circle text-success me-2"></i> Refreshment zone with healthy snacks and beverages</li>
+              <li class="mb-2"><i class="fas fa-check-circle text-success me-2"></i> High-powered LED floodlights for night play</li>
+              
+            </ul>
+            <p class="mt-3 mb-4">Our mission is to promote sports culture and provide accessible, high-quality facilities that inspire active lifestyles in our community.</p>
+            <!--<a href="{% url 'book_now' %}" class="btn btn-success mt-2">Book Your Slot Now</a>-->
+          </div>
+          <div class="col-md-6">
+            <!--<div class="rounded shadow overflow-hidden">
+              <img src="{% static 'images/turf.jpg' %}" alt="SK Sports Turf" class="img-fluid w-100" onerror="this.src='https://images.unsplash.com/photo-1525361581163-698788aad262?ixlib=rb-4.0.3&ixid=MnwxMjA3fDB8MHxwaG90by1wYWdlfHx8fGVufDB8fHx8&auto=format&fit=crop&w=1374&q=80'; this.onerror=null;">
+            </div>-->
+            <div class="row mt-3">
+              <div class="col-6">
+                <div class="rounded shadow overflow-hidden">
+                  <img src="{% static 'images/turf-night.jpg' %}" alt="Night Play" class="img-fluid w-100" onerror="this.src='https://images.unsplash.com/photo-1529900748604-07564a03e7a6?ixlib=rb-4.0.3&ixid=MnwxMjA3fDB8MHxwaG90by1wYWdlfHx8fGVufDB8fHx8&auto=format&fit=crop&w=1170&q=80'; this.onerror=null;">
+                </div>
+              </div>
+              <div class="col-6">
+                <div class="rounded shadow overflow-hidden">
+                  <img src="{% static 'images/facilities.jpg' %}" alt="Facilities" class="img-fluid w-100" onerror="this.src='https://images.unsplash.com/photo-1574629810360-7efbbe195018?ixlib=rb-4.0.3&ixid=MnwxMjA3fDB8MHxwaG90by1wYWdlfHx8fGVufDB8fHx8&auto=format&fit=crop&w=1293&q=80'; this.onerror=null;">
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </section>
+
+
+    <!-- Features Section -->
+    <section class="py-5">
+      <div class="container">
+        <div class="text-center mb-5">
+          <h2 class="fw-bold">Why Choose Us?</h2>
+          <p class="lead text-muted">We offer the best turf experience in town</p>
+        </div>
+        <div class="row g-4">
+          <div class="col-md-4">
+            <div class="card feature-card shadow-sm">
+              <div class="card-body text-center p-4">
+                <div class="feature-icon">
+                  <i class="fas fa-medal"></i>
+                </div>
+                <h4>Premium Quality</h4>
+                <p class="text-muted">Experience world-class artificial turf that feels just like natural grass.</p>
+              </div>
+            </div>
+          </div>
+          <div class="col-md-4">
+            <div class="card feature-card shadow-sm">
+              <div class="card-body text-center p-4">
+                <div class="feature-icon">
+                  <i class="fas fa-calendar-check"></i>
+                </div>
+                <h4>Easy Booking</h4>
+                <p class="text-muted">Book your preferred time slots online with our easy-to-use booking system.</p>
+              </div>
+            </div>
+          </div>
+          <div class="col-md-4">
+            <div class="card feature-card shadow-sm">
+              <div class="card-body text-center p-4">
+                <div class="feature-icon">
+                  <i class="fas fa-lightbulb"></i>
+                </div>
+                <h4>Floodlights</h4>
+                <p class="text-muted">High-quality floodlights for night games. Play anytime you want!</p>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </section>
+
+   
+    <!-- Contact Info -->
+    <section class="py-5">
+      <div class="container">
+        <div class="row">
+          <div class="col-md-6 mx-auto text-center">
+            <h3 class="mb-4">Contact Information</h3>
+            <p class="lead mb-4">{{ turf.address }}</p>
+            <div class="d-flex justify-content-center gap-4">
+              <a href="tel:{{ turf.contact_phone }}" class="text-decoration-none">
+                <i class="fas fa-phone-alt me-2"></i>{{ turf.contact_phone }}
+              </a>
+              <a href="mailto:{{ turf.contact_email }}" class="text-decoration-none">
+                <i class="fas fa-envelope me-2"></i>{{ turf.contact_email }}
+              </a>
+            </div>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <!-- Footer -->
+    <footer class="bg-dark text-white py-4">
+      <div class="container">
+        <div class="row">
+          <div class="col-md-6">
+            <h4>{{ turf.name }}</h4>
+            <p>The ultimate sports turf experience</p>
+          </div>
+          <div class="col-md-6 text-md-end">
+            <p>&copy; 2023 {{ turf.name }}. All Rights Reserved.</p>
+          </div>
+        </div>
+      </div>
+    </footer>
+
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0-alpha1/dist/js/bootstrap.bundle.min.js"></script>
+    
+    <!-- Video background script -->
+    <script>
+      document.addEventListener('DOMContentLoaded', function() {
+        const video = document.querySelector('.hero-video');
+        
+        // Smooth scrolling for "About Us" link
+        document.getElementById('about-link').addEventListener('click', function(e) {
+          e.preventDefault();
+          const aboutSection = document.getElementById('about-section');
+          aboutSection.scrollIntoView({ behavior: 'smooth' });
+        });
+        
+        // Force video to load and play
+        if (video) {
+          video.load();
+          video.style.display = 'block'; // Ensure video is visible
+          
+          // Try to play automatically
+          const playPromise = video.play();
+          
+          if (playPromise !== undefined) {
+            playPromise.catch(error => {
+              console.log('Auto-play was prevented:', error);
+              // Add click-to-play functionality if autoplay is blocked
+              document.querySelector('.hero-section').addEventListener('click', function() {
+                video.play();
+              });
+            });
+          }
+
+          // Add error handling
+          video.addEventListener('error', function(e) {
+            console.error('Error with video:', e);
+            // If video fails, add a fallback background
+            document.querySelector('.hero-section').style.backgroundImage = "url('{% static 'images/bg.png' %}')";
+          });
+        }
+      });
+    </script>
+  </body>
+</html>

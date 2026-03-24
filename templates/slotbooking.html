@@ -1,0 +1,485 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta http-equiv="X-UA-Compatible" content="IE=edge">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <link rel="stylesheet" href="https://fonts.googleapis.com/icon?family=Material+Icons">
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.1.2/dist/css/bootstrap.min.css" rel="stylesheet" integrity="sha384-uWxY/CJNBR+1zjPWmfnSnVxwRheevXITnMqoEIeG1LJrdI0GlVs/9cVSyPYXdcSF" crossorigin="anonymous">
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.1.3/dist/js/bootstrap.bundle.min.js" integrity="sha384-ka7Sk0Gln4gmtz2MlQnikT1wXgYsOg+OMhuP+IlRH9sENBO0LRn5q+8nbTov4+1p" crossorigin="anonymous"></script>
+    <title>{{ turf_name }} - Slot Booking</title>
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0-alpha1/dist/css/bootstrap.min.css" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css">
+    <style>
+        .time-slot {
+            border: 1px solid #28a745;
+            border-radius: 5px;
+            padding: 10px;
+            margin-bottom: 10px;
+            cursor: pointer;
+            transition: all 0.3s;
+        }
+        .time-slot:hover:not(.disabled) {
+            background-color: #f8f9fa;
+            transform: translateY(-2px);
+            box-shadow: 0 3px 6px rgba(0,0,0,0.1);
+        }
+        .time-slot.selected {
+            background-color: #28a745;
+            color: white;
+            border-color: #28a745;
+        }
+        .time-slot.disabled {
+            background-color: #f1f1f1;
+            color: #999;
+            cursor: not-allowed;
+            opacity: 1;
+            position: relative;
+            border-color: #ced4da;
+        }
+        .time-slot.disabled::before {
+            content: "";
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background-color: rgba(150, 150, 150, 0.1);
+            z-index: 1;
+        }
+        /* BookMyShow style slot indicators */
+        .slot-status-container {
+            display: flex;
+            justify-content: space-around;
+            margin-bottom: 20px;
+            padding: 10px;
+            background-color: #f8f9fa;
+            border-radius: 5px;
+        }
+        .slot-indicator {
+            display: flex;
+            align-items: center;
+            font-size: 0.85rem;
+        }
+        .slot-color {
+            width: 20px;
+            height: 20px;
+            border-radius: 4px;
+            margin-right: 8px;
+        }
+        .available-color {
+            background-color: white;
+            border: 1px solid #28a745;
+        }
+        .selected-color {
+            background-color: #28a745;
+            border: 1px solid #28a745;
+        }
+        .booked-color {
+            background-color: #f1f1f1;
+            border: 1px solid #ced4da;
+        }
+        .booking-summary {
+            border: 1px solid #dee2e6;
+            border-radius: 5px;
+            padding: 15px;
+            position: sticky;
+            top: 20px;
+            font-size: 0.95rem;
+        }
+        .booking-date {
+            font-size: 1.3rem;
+            font-weight: bold;
+            margin-bottom: 10px;
+        }
+        .booking-summary h4 {
+            font-size: 1.2rem;
+            margin-bottom: 10px;
+        }
+        .booking-summary hr {
+            margin: 8px 0;
+        }
+        .form-check-label {
+            font-size: 0.85rem;
+        }
+        /* Add a separate container for all time slots */
+        .time-slots-container {
+            display: grid;
+            grid-template-columns: repeat(3, 1fr); /* 3 columns layout */
+            gap: 8px; /* Smaller gap between items */
+        }
+        
+        /* Adjust column layout for time slot items */
+        .time-slot-item {
+            padding: 0 5px; /* Reduced padding */
+        }
+        
+        /* Make time slot text smaller */
+        .time-slot h5 {
+            font-size: 1rem;
+            margin-bottom: 0;
+        }
+        
+        .time-slot small {
+            font-size: 0.8rem;
+        }
+        
+        /* Layout for larger screens */
+        @media (min-width: 1200px) {
+            .time-slots-container {
+                grid-template-columns: repeat(5, 1fr); /* 5 columns on large screens */
+            }
+        }
+    </style>
+</head>
+<body>
+    <!-- Navigation-->
+    <nav class="navbar navbar-expand-lg navbar-dark bg-dark">
+        <div class="container px-4 px-lg-5">
+            <a class="navbar-brand" href="/">SurfTheTurf</a>
+            <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#navbarSupportedContent" aria-controls="navbarSupportedContent" aria-expanded="false" aria-label="Toggle navigation"><span class="navbar-toggler-icon"></span></button>
+            <div class="collapse navbar-collapse" id="navbarSupportedContent">
+                <ul class="navbar-nav me-auto mb-2 mb-lg-0 ms-lg-4">
+                    <li class="nav-item"><a class="nav-link" aria-current="page" href="/">Home</a></li>
+                    <li class="nav-item"><a class="nav-link active" href="book_now">BookNow</a></li>
+                    <!--<li class="nav-item"><a class="nav-link" href="#">AboutUs</a></li>
+                    <li class="nav-item"><a class="nav-link" href="../templates/contactUs.html">ContactUs</a></li>-->
+                    {% if user.is_authenticated %}
+                    <!--<li class="nav-item"><a class="nav-link" href="logout">Logout</a></li>-->
+                    {% else %}
+                    <li class="nav-item"><a class="nav-link" href="signup">SignUp</a></li>
+                    <li class="nav-item"><a class="nav-link" href="login">Login</a></li>
+                    {% endif %}
+                </ul>
+            </div>
+        </div>
+    </nav>
+
+    <!-- Header -->
+    <header class="bg-dark text-white py-2">
+        <div class="container">
+            <div class="d-flex justify-content-between align-items-center">
+                <h1 class="h3 mb-0">{{ turf_name }}</h1>
+                <div>
+                    <a href="{% url 'turf_details' %}" class="btn btn-sm btn-outline-light me-2">Back to Calendar</a>
+                    <a href="{% url 'logout' %}" class="btn btn-sm btn-light">Logout</a>
+                </div>
+            </div>
+        </div>
+    </header>
+
+    <!-- Main Content -->
+    <div class="container py-3">
+        <div class="row">
+            <div class="col-md-8">
+                <div class="card mb-3">
+                    <div class="card-header bg-primary text-white py-2">
+                        <h3 class="h5 mb-0">Select Time Slots for {{ selectedDate }} ({{ day }})</h3>
+                    </div>
+                    <div class="card-body p-3">
+                        {% if messages %}
+                        <div class="messages mb-2">
+                            {% for message in messages %}
+                            <div class="alert alert-{{ message.tags }} alert-dismissible fade show py-2 mb-2" role="alert">
+                                {{ message }}
+                                <button type="button" class="btn-close btn-sm py-1" data-bs-dismiss="alert" aria-label="Close"></button>
+                            </div>
+                            {% endfor %}
+                        </div>
+                        {% endif %}
+
+                        
+
+                        <!-- BookMyShow-style slot indicators -->
+                        <div class="slot-status-container">
+                            <div class="slot-indicator">
+                                <div class="slot-color available-color"></div>
+                                <span>Available</span>
+                            </div>
+                            <div class="slot-indicator">
+                                <div class="slot-color selected-color"></div>
+                                <span>Selected</span>
+                            </div>
+                            <div class="slot-indicator">
+                                <div class="slot-color booked-color"></div>
+                                <span>Booked</span>
+                            </div>
+                        </div>
+
+                        <!-- Time slots grid -->
+                        <div class="time-slots-container">
+                            {% for slot in time_slots %}
+                            <div class="time-slot-item">
+                                <div class="time-slot {% if slot.booked %}disabled{% endif %}" 
+                                     data-id="{{ slot.id }}" 
+                                     data-time="{{ slot.time }}" 
+                                     data-price="{{ slot_price }}">
+                                    <div class="d-flex justify-content-between align-items-center">
+                                        <div>
+                                            <h5 class="mb-0">{{ slot.time }}</h5>
+                                            <small>₹{{ slot_price }}</small>
+                                        </div>
+                                        <div>
+                                            {% if slot.booked %}
+                                            <span class="badge bg-secondary">Expired</span>
+                                            {% else %}
+                                            <i class="far fa-clock"></i>
+                                            {% endif %}
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                            {% endfor %}
+                        </div>
+                    </div>
+                </div>
+            </div>
+            <div class="col-md-4">
+                <div class="booking-summary">
+                    <div class="booking-date">{{ selectedDate }}</div>
+                    <h4>Booking Summary</h4>
+                    <hr>
+                    <div id="selected-slots-container">
+                        <p class="text-muted">No slots selected</p>
+                    </div>
+                    <hr>
+                    <div class="d-flex justify-content-between mb-3">
+                        <h5>Total:</h5>
+                        <h5 id="total-price">₹0</h5>
+                    </div>
+                    <form id="booking-form" method="post" action="{% url 'turfBilling' %}">
+                        {% csrf_token %}
+                        <input type="hidden" name="username" value="{{ request.user.username }}">
+                        <input type="hidden" name="email" value="{{ request.user.email }}">
+                        <input type="hidden" name="selected_date" value="{{ selectedDate }}">
+                        <input type="hidden" name="current_date" value="{{ currentDate }}">
+                        <input type="hidden" name="total_amount" id="total-amount" value="0">
+                        <div id="slots-inputs"></div>
+                        <button type="submit" class="btn btn-success w-100" id="book-now-btn" disabled>Book Now</button>
+                    </form>
+                    
+                    <!-- Terms and Conditions Section -->
+                    <div class="mt-3">
+                        <button type="button" class="btn btn-outline-secondary w-100" data-bs-toggle="modal" data-bs-target="#termsModal">
+                            Terms and Conditions
+                        </button>
+                        <div class="form-check mt-2">
+                            <input class="form-check-input" type="checkbox" id="termsCheckbox">
+                            <label class="form-check-label" for="termsCheckbox">
+                                I have read and agree to the Terms and Conditions
+                            </label>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Terms and Conditions Modal -->
+    <div class="modal fade" id="termsModal" tabindex="-1" aria-labelledby="termsModalLabel" aria-hidden="true">
+        <div class="modal-dialog modal-dialog-scrollable">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <h5 class="modal-title" id="termsModalLabel">S K Sports Park Turf - Terms and Conditions</h5>
+                    <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+                </div>
+                <div class="modal-body">
+                    <h6>Booking Policy</h6>
+                    <p>1. Bookings are confirmed only after full payment is made.</p>
+                    <p>2.Once slot is booked then not allow to cancel</p>
+                    <p>3. <strong>Only 16 players are allowed per time slot.</strong> Additional players will not be permitted on the field.</p>
+                    <p>4. No-shows will not be refunded.</p>
+                    
+                    <h6>Usage Rules</h6>
+                    <p>1. Players must arrive 15 minutes before their scheduled slot.</p>
+                    <p>2. The booked time slot includes setup and cleanup time.</p>
+                    <p>3. Players must wear appropriate footwear (turf shoes/studs).</p>
+                    <p>4. Food and drinks (except water) are not allowed on the playing area.</p>
+                    <p>5. Smoking and alcohol consumption are strictly prohibited on the premises.</p>
+                    
+                    <h6>Equipment Provision</h6>
+                    <p>1. Only cricket bats, stumps, and footballs are provided by S K Sports Park.</p>
+                    <p>2. Cricket balls must be brought by the players.</p>
+                    <p>3. Players are responsible for the proper handling of all provided equipment.</p>
+                    
+                    <h6>Liability</h6>
+                    <p>1. S K Sports Park is not responsible for any injuries sustained during play.</p>
+                    <p>2. Players are responsible for their personal belongings.</p>
+                    <p>3. Any damage to the facility or equipment will be charged to the booking party.</p>
+                    
+                    <h6>Weather Policy</h6>
+                    <p>1. In case of severe weather conditions, bookings may be rescheduled or refunded at the management's discretion.</p>
+                    <p>2. Light rain does not qualify for cancellation or refund.</p>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-primary" data-bs-dismiss="modal" id="termsAcceptButton">I Understand</button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0-alpha1/dist/js/bootstrap.bundle.min.js"></script>
+    <script>
+        document.addEventListener('DOMContentLoaded', function() {
+            const timeSlots = document.querySelectorAll('.time-slot:not(.disabled)');
+            const selectedSlotsContainer = document.getElementById('selected-slots-container');
+            const totalPriceElement = document.getElementById('total-price');
+            const totalAmountInput = document.getElementById('total-amount');
+            const slotsInputsContainer = document.getElementById('slots-inputs');
+            const bookNowBtn = document.getElementById('book-now-btn');
+            const termsCheckbox = document.getElementById('termsCheckbox');
+            const termsAcceptButton = document.getElementById('termsAcceptButton');
+            
+            const selectedSlots = [];
+            
+            // Initially disable Book Now button until terms are accepted
+            bookNowBtn.disabled = true;
+            
+            // When the user clicks "I Understand" in the terms modal
+            termsAcceptButton.addEventListener('click', function() {
+                termsCheckbox.checked = true;
+                checkBookingButtonStatus();
+            });
+            
+            // When the user toggles the terms checkbox
+            termsCheckbox.addEventListener('change', function() {
+                checkBookingButtonStatus();
+            });
+            
+            // Function to check if Book Now button should be enabled
+            function checkBookingButtonStatus() {
+                // Enable only if terms are accepted AND slots are selected
+                bookNowBtn.disabled = !(termsCheckbox.checked && selectedSlots.length > 0);
+            }
+            
+            timeSlots.forEach(slot => {
+                slot.addEventListener('click', function() {
+                    const slotId = this.dataset.id;
+                    const slotTime = this.dataset.time;
+                    const slotPrice = parseInt(this.dataset.price);
+                    
+                    if (this.classList.contains('selected')) {
+                        // Deselect the slot
+                        this.classList.remove('selected');
+                        const index = selectedSlots.findIndex(s => s.id === slotId);
+                        if (index !== -1) {
+                            selectedSlots.splice(index, 1);
+                        }
+                    } else {
+                        // Select the slot
+                        this.classList.add('selected');
+                        selectedSlots.push({
+                            id: slotId,
+                            time: slotTime,
+                            price: slotPrice
+                        });
+                    }
+                    
+                    // Update the booking summary
+                    updateBookingSummary();
+                });
+            });
+            
+            function updateBookingSummary() {
+                // Clear previous inputs
+                slotsInputsContainer.innerHTML = '';
+                
+                if (selectedSlots.length === 0) {
+                    selectedSlotsContainer.innerHTML = '<p class="text-muted">No slots selected</p>';
+                    totalPriceElement.textContent = '₹0';
+                    totalAmountInput.value = 0;
+                    checkBookingButtonStatus();
+                    return;
+                }
+                
+                let html = '<ul class="list-group">';
+                let totalPrice = 0;
+                
+                selectedSlots.forEach(slot => {
+                    html += `
+                        <li class="list-group-item d-flex justify-content-between align-items-center">
+                            ${slot.time}
+                            <span>₹${slot.price}</span>
+                        </li>
+                    `;
+                    
+                    // Add hidden input for each slot
+                    const input = document.createElement('input');
+                    input.type = 'hidden';
+                    input.name = 'slots';
+                    input.value = slot.time;
+                    slotsInputsContainer.appendChild(input);
+                    
+                    totalPrice += slot.price;
+                });
+                
+                html += '</ul>';
+                selectedSlotsContainer.innerHTML = html;
+                totalPriceElement.textContent = `₹${totalPrice}`;
+                totalAmountInput.value = totalPrice;
+                checkBookingButtonStatus();
+            }
+
+            // Function to check for newly booked slots in real-time
+            function checkForBookedSlots() {
+                const selectedDate = "{{ selectedDate }}";
+                
+                // Create a fetch request to check slot status
+                fetch(`/check_slot_status/?date=${selectedDate}`)
+                    .then(response => response.json())
+                    .then(data => {
+                        if (data.booked_slots && Array.isArray(data.booked_slots)) {
+                            // Update the UI based on booked slots
+                            updateSlotAvailability(data.booked_slots);
+                        }
+                    })
+                    .catch(error => {
+                        console.error('Error checking slot availability:', error);
+                    });
+            }
+
+            // Function to update the UI based on booked slots
+            function updateSlotAvailability(bookedSlots) {
+                const allSlotElements = document.querySelectorAll('.time-slot');
+                
+                allSlotElements.forEach(slotElement => {
+                    const slotTime = slotElement.dataset.time;
+                    
+                    // If the slot is in the booked list but not already marked as disabled
+                    if (bookedSlots.includes(slotTime) && !slotElement.classList.contains('disabled')) {
+                        // If this slot was selected, remove it from selection
+                        if (slotElement.classList.contains('selected')) {
+                            slotElement.classList.remove('selected');
+                            const index = selectedSlots.findIndex(s => s.time === slotTime);
+                            if (index !== -1) {
+                                selectedSlots.splice(index, 1);
+                            }
+                            // Update booking summary to reflect changes
+                            updateBookingSummary();
+                        }
+                        
+                        // Mark as booked
+                        slotElement.classList.add('disabled');
+                        
+                        // Update the icon to show it's booked
+                        const iconContainer = slotElement.querySelector('div > div:last-child');
+                        if (iconContainer) {
+                            iconContainer.innerHTML = '<span class="badge bg-secondary">Sold</span>';
+                        }
+                        
+                        // Remove event listeners by cloning and replacing
+                        const newSlot = slotElement.cloneNode(true);
+                        slotElement.parentNode.replaceChild(newSlot, slotElement);
+                    }
+                });
+            }
+
+            // Check slot availability every 10 seconds
+            setInterval(checkForBookedSlots, 10000);
+            
+            // Also check immediately when page loads
+            checkForBookedSlots();
+        });
+    </script>
+</body>
+</html>

@@ -1,0 +1,18 @@
+Password Reset for SK Sports Park Account
+
+Dear Customer,
+
+Your turf booking at The SK Sports Park has been confirmed. Thank you for using our service!
+
+RECEIPT DETAILS:
+-----------------
+Date: {{ selected_date }}
+Time Slots: {% for slot in slots %}{{ slot }}{% if not forloop.last %}, {% endif %}{% endfor %}
+Amount Paid: ₹{{ amount }}
+Payment Method: {{ payment_method }}
+Venue: The SK Sports Park
+
+We look forward to having you at The SK Sports Park. Please arrive a few minutes before your booked time.
+
+Best Regards,
+The SK Sports Park Team

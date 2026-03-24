@@ -1,0 +1,469 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>The SK Sports Turf - Analytics</title>
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0-alpha1/dist/css/bootstrap.min.css" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css">
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <style>
+        .sidebar {
+            min-height: 100vh;
+            position: fixed;
+            top: 0;
+            left: 0;
+            z-index: 100;
+            padding: 48px 0 0;
+            box-shadow: inset -1px 0 0 rgba(0, 0, 0, .1);
+            background-color: #f8f9fa;
+        }
+        .sidebar-sticky {
+            height: calc(100vh - 48px);
+            overflow-x: hidden;
+            overflow-y: auto;
+        }
+        .nav-link {
+            font-weight: 500;
+            color: #333;
+        }
+        .nav-link.active {
+            color: #007bff;
+        }
+        .main-content {
+            margin-left: 240px;
+            padding: 2rem;
+        }
+        .dashboard-card {
+            border-radius: 10px;
+            box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+            margin-bottom: 24px;
+        }
+        .chart-container {
+            position: relative;
+            height: 300px;
+            width: 100%;
+        }
+        @media (max-width: 768px) {
+            .sidebar {
+                position: static;
+                height: auto;
+            }
+            .main-content {
+                margin-left: 0;
+            }
+        }
+        .btn-view-type {
+            border-radius: 20px;
+            padding: 5px 15px;
+            margin-right: 5px;
+            font-size: 14px;
+            font-weight: 500;
+        }
+        .btn-view-type.active {
+            background-color: #0d6efd;
+            color: white;
+        }
+    </style>
+</head>
+<body>
+    <!-- Sidebar -->
+    <nav class="col-md-3 col-lg-2 d-md-block sidebar collapse">
+        <div class="position-sticky sidebar-sticky">
+            <h3 class="text-center my-4">SK Sports Turf</h3>
+            <ul class="nav flex-column">
+                <li class="nav-item">
+                    <a class="nav-link" href="{% url 'owner_dashboard' %}">
+                        <i class="fas fa-tachometer-alt me-2"></i>
+                        Dashboard
+                    </a>
+                </li>
+                <li class="nav-item">
+                    <a class="nav-link" href="{% url 'owner_bookings' %}">
+                        <i class="fas fa-calendar-alt me-2"></i>
+                        Bookings
+                    </a>
+                </li>
+                <li class="nav-item">
+                    <a class="nav-link" href="{% url 'owner_payments' %}">
+                        <i class="fas fa-money-bill-wave me-2"></i>
+                        Payments
+                    </a>
+                </li>
+                <li class="nav-item">
+                    <a class="nav-link active" href="{% url 'owner_analytics' %}">
+                        <i class="fas fa-chart-line me-2"></i>
+                        Analytics
+                    </a>
+                </li>
+                <li class="nav-item">
+                    <a class="nav-link" href="{% url 'owner_settings' %}">
+                        <i class="fas fa-cog me-2"></i>
+                        Settings
+                    </a>
+                </li>
+                <li class="nav-item mt-5">
+                    <a class="nav-link" href="{% url 'logout' %}">
+                        <i class="fas fa-sign-out-alt me-2"></i>
+                        Logout
+                    </a>
+                </li>
+            </ul>
+        </div>
+    </nav>
+
+    <!-- Main Content -->
+    <main class="main-content">
+        <div class="container-fluid">
+            <div class="d-flex justify-content-between flex-wrap flex-md-nowrap align-items-center pt-3 pb-2 mb-3 border-bottom">
+                <h1 class="h2">Analytics Dashboard</h1>
+            </div>
+
+            <!-- Django Messages Section -->
+            {% if messages %}
+            <div class="messages-container mb-4">
+                {% for message in messages %}
+                <div class="alert alert-{% if message.tags == 'success' %}success{% elif message.tags == 'error' %}danger{% elif message.tags == 'warning' %}warning{% else %}info{% endif %} alert-dismissible fade show" role="alert">
+                    {{ message }}
+                    <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
+                </div>
+                {% endfor %}
+            </div>
+            {% endif %}
+            <!-- End Django Messages Section -->
+
+            <!-- Date Range & View Type Selector -->
+            <div class="row mb-4">
+                <div class="col-md-12">
+                    <div class="card dashboard-card">
+                        <div class="card-body">
+                            <form method="get" class="row g-3 align-items-center">
+                                <div class="col-md-3">
+                                    <label for="start_date" class="form-label">Start Date</label>
+                                    <input type="date" class="form-control" id="start_date" name="start_date" value="{{ start_date }}">
+                                </div>
+                                <div class="col-md-3">
+                                    <label for="end_date" class="form-label">End Date</label>
+                                    <input type="date" class="form-control" id="end_date" name="end_date" value="{{ end_date }}">
+                                </div>
+                                <div class="col-md-4">
+                                    <label class="form-label">View Type</label>
+                                    <div>
+                                        <input type="hidden" name="view_type" id="view_type" value="{{ view_type }}">
+                                        <button type="button" class="btn btn-outline-primary btn-view-type {% if view_type == 'daily' %}active{% endif %}" data-view-type="daily">Daily</button>
+                                        <button type="button" class="btn btn-outline-primary btn-view-type {% if view_type == 'weekly' %}active{% endif %}" data-view-type="weekly">Weekly</button>
+                                        <button type="button" class="btn btn-outline-primary btn-view-type {% if view_type == 'monthly' %}active{% endif %}" data-view-type="monthly">Monthly</button>
+                                        <button type="button" class="btn btn-outline-primary btn-view-type {% if view_type == 'yearly' %}active{% endif %}" data-view-type="yearly">Yearly</button>
+                                    </div>
+                                </div>
+                                <div class="col-md-2">
+                                    <label class="form-label">&nbsp;</label>
+                                    <button type="submit" class="btn btn-primary d-block w-100">Apply Filter</button>
+                                </div>
+                            </form>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Charts Row 1 - Line Charts -->
+            <div class="row mb-4">
+                <div class="col-md-6">
+                    <div class="card dashboard-card">
+                        <div class="card-header bg-white">
+                            <h5 class="card-title mb-0">Bookings Trend</h5>
+                        </div>
+                        <div class="card-body">
+                            <div class="chart-container">
+                                <canvas id="bookingsChart"></canvas>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+                <div class="col-md-6">
+                    <div class="card dashboard-card">
+                        <div class="card-header bg-white">
+                            <h5 class="card-title mb-0">Revenue Trend</h5>
+                        </div>
+                        <div class="card-body">
+                            <div class="chart-container">
+                                <canvas id="revenueChart"></canvas>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Charts Row 2 - Pie Charts -->
+            <div class="row mb-4">
+                <div class="col-md-6">
+                    <div class="card dashboard-card">
+                        <div class="card-header bg-white">
+                            <h5 class="card-title mb-0">Payment Method Distribution</h5>
+                        </div>
+                        <div class="card-body">
+                            <div class="chart-container">
+                                <canvas id="paymentMethodChart"></canvas>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+                <div class="col-md-6">
+                    <div class="card dashboard-card">
+                        <div class="card-header bg-white">
+                            <h5 class="card-title mb-0">Most Popular Time Slots</h5>
+                        </div>
+                        <div class="card-body">
+                            <div class="chart-container">
+                                <canvas id="timeSlotChart"></canvas>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Detailed Analytics Table -->
+            <div class="row mb-4">
+                <div class="col-md-12">
+                    <div class="card dashboard-card">
+                        <div class="card-header bg-white">
+                            <h5 class="card-title mb-0">Detailed Analytics</h5>
+                        </div>
+                        <div class="card-body">
+                            <div class="table-responsive">
+                                <table class="table table-hover">
+                                    <thead>
+                                        <tr>
+                                            <th>Date</th>
+                                            <th>Bookings</th>
+                                            <th>Revenue</th>
+                                            <th>Avg. Revenue/Booking</th>
+                                        </tr>
+                                    </thead>
+                                    <tbody>
+                                        {% for i in date_range|length|get_range %}
+                                        <tr>
+                                            <td>{{ date_range|get_item:i }}</td>
+                                            <td>{{ bookings_data|get_item:i }}</td>
+                                            <td>₹{{ revenue_data|get_item:i }}</td>
+                                            <td>
+                                                {% if bookings_data|get_item:i > 0 %}
+                                                ₹{{ avg_revenue_data|get_item:i|floatformat:2 }}
+                                                {% else %}
+                                                ₹0
+                                                {% endif %}
+                                            </td>
+                                        </tr>
+                                        {% empty %}
+                                        <tr>
+                                            <td colspan="4" class="text-center">No data available</td>
+                                        </tr>
+                                        {% endfor %}
+                                    </tbody>
+                                </table>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </main>
+
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0-alpha1/dist/js/bootstrap.bundle.min.js"></script>
+    <script>
+        // Auto-dismiss alerts after 5 seconds
+        document.addEventListener('DOMContentLoaded', function() {
+            setTimeout(function() {
+                var alerts = document.querySelectorAll('.alert');
+                alerts.forEach(function(alert) {
+                    // Use Bootstrap's alert dismiss functionality 
+                    var bsAlert = bootstrap.Alert.getOrCreateInstance(alert);
+                    bsAlert.close();
+                });
+            }, 5000);
+        });
+    
+        // Handle view type button clicks
+        document.querySelectorAll('.btn-view-type').forEach(button => {
+            button.addEventListener('click', function() {
+                // Remove active class from all buttons
+                document.querySelectorAll('.btn-view-type').forEach(btn => {
+                    btn.classList.remove('active');
+                });
+                
+                // Add active class to clicked button
+                this.classList.add('active');
+                
+                // Update hidden input value
+                document.getElementById('view_type').value = this.getAttribute('data-view-type');
+            });
+        });
+
+        // Chart.js Colors
+        const chartColors = [
+            'rgba(54, 162, 235, 0.8)',  // Blue
+            'rgba(255, 99, 132, 0.8)',   // Red
+            'rgba(75, 192, 192, 0.8)',   // Green
+            'rgba(255, 159, 64, 0.8)',   // Orange
+            'rgba(153, 102, 255, 0.8)',  // Purple
+            'rgba(255, 205, 86, 0.8)',   // Yellow
+            'rgba(201, 203, 207, 0.8)',  // Grey
+            'rgba(54, 162, 235, 0.5)',   // Light Blue
+            'rgba(255, 99, 132, 0.5)',   // Light Red
+            'rgba(75, 192, 192, 0.5)'    // Light Green
+        ];
+
+        // Get data from Django template - parse JSON strings into JavaScript objects
+        // Using JSON.parse to properly convert Django JSON strings to JS objects
+        const timeLabels = JSON.parse('{{ time_labels|escapejs }}');
+        const timeBookings = JSON.parse('{{ time_bookings|escapejs }}');
+        const timeRevenue = JSON.parse('{{ time_revenue|escapejs }}');
+        
+        const paymentMethodLabels = JSON.parse('{{ payment_method_labels|escapejs }}');
+        const paymentMethodCounts = JSON.parse('{{ payment_method_counts|escapejs }}');
+        const paymentMethodAmounts = JSON.parse('{{ payment_method_amounts|escapejs }}');
+        
+        const timeSlotLabels = JSON.parse('{{ time_slot_labels|escapejs }}');
+        const timeSlotCounts = JSON.parse('{{ time_slot_counts|escapejs }}');
+
+        // Bookings Line Chart
+        const bookingsCtx = document.getElementById('bookingsChart').getContext('2d');
+        new Chart(bookingsCtx, {
+            type: 'line',
+            data: {
+                labels: timeLabels,
+                datasets: [{
+                    label: 'Number of Bookings',
+                    data: timeBookings,
+                    backgroundColor: 'rgba(54, 162, 235, 0.2)',
+                    borderColor: 'rgba(54, 162, 235, 1)',
+                    borderWidth: 2,
+                    tension: 0.1,
+                    pointRadius: 4,
+                    pointBackgroundColor: 'rgba(54, 162, 235, 1)'
+                }]
+            },
+            options: {
+                responsive: true,
+                maintainAspectRatio: false,
+                scales: {
+                    y: {
+                        beginAtZero: true,
+                        ticks: {
+                            precision: 0
+                        }
+                    }
+                }
+            }
+        });
+
+        // Revenue Line Chart
+        const revenueCtx = document.getElementById('revenueChart').getContext('2d');
+        new Chart(revenueCtx, {
+            type: 'line',
+            data: {
+                labels: timeLabels,
+                datasets: [{
+                    label: 'Revenue (₹)',
+                    data: timeRevenue,
+                    backgroundColor: 'rgba(75, 192, 192, 0.2)',
+                    borderColor: 'rgba(75, 192, 192, 1)',
+                    borderWidth: 2,
+                    tension: 0.1,
+                    pointRadius: 4,
+                    pointBackgroundColor: 'rgba(75, 192, 192, 1)'
+                }]
+            },
+            options: {
+                responsive: true,
+                maintainAspectRatio: false,
+                scales: {
+                    y: {
+                        beginAtZero: true
+                    }
+                }
+            }
+        });
+
+        // Payment Method Pie Chart
+        const paymentMethodCtx = document.getElementById('paymentMethodChart').getContext('2d');
+        new Chart(paymentMethodCtx, {
+            type: 'pie',
+            data: {
+                labels: paymentMethodLabels,
+                datasets: [{
+                    label: 'Bookings by Payment Method',
+                    data: paymentMethodCounts,
+                    backgroundColor: chartColors,
+                    borderColor: 'white',
+                    borderWidth: 1
+                }]
+            },
+            options: {
+                responsive: true,
+                maintainAspectRatio: false,
+                plugins: {
+                    legend: {
+                        position: 'right',
+                        labels: {
+                            boxWidth: 15
+                        }
+                    },
+                    tooltip: {
+                        callbacks: {
+                            label: function(context) {
+                                const label = context.label || '';
+                                const value = context.parsed || 0;
+                                const dataset = context.dataset;
+                                const total = dataset.data.reduce((a, b) => a + b, 0);
+                                const percentage = Math.round((value / total) * 100);
+                                return `${label}: ${value} bookings (${percentage}%)`;
+                            }
+                        }
+                    }
+                }
+            }
+        });
+
+        // Time Slot Popularity Pie Chart
+        const timeSlotCtx = document.getElementById('timeSlotChart').getContext('2d');
+        new Chart(timeSlotCtx, {
+            type: 'pie',
+            data: {
+                labels: timeSlotLabels,
+                datasets: [{
+                    label: 'Most Popular Time Slots',
+                    data: timeSlotCounts,
+                    backgroundColor: chartColors,
+                    borderColor: 'white',
+                    borderWidth: 1
+                }]
+            },
+            options: {
+                responsive: true,
+                maintainAspectRatio: false,
+                plugins: {
+                    legend: {
+                        position: 'right',
+                        labels: {
+                            boxWidth: 15
+                        }
+                    },
+                    tooltip: {
+                        callbacks: {
+                            label: function(context) {
+                                const label = context.label || '';
+                                const value = context.parsed || 0;
+                                const dataset = context.dataset;
+                                const total = dataset.data.reduce((a, b) => a + b, 0);
+                                const percentage = Math.round((value / total) * 100);
+                                return `${label}: ${value} bookings (${percentage}%)`;
+                            }
+                        }
+                    }
+                }
+            }
+        });
+    </script>
+</body>
+</html> 

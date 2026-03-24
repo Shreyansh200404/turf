@@ -1,0 +1,330 @@
+<!DOCTYPE html>
+<html>
+  <head>
+    <title>Login Form</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <link
+      href="https://fonts.googleapis.com/css2?family=Poppins:wght@400;500;600;700;800;900&display=swap"
+      rel="stylesheet"
+    />
+    <!--<link rel="shortcut icon" type="image/jpg" href="../static/images/favicon.ico"/>-->
+    <link
+      rel="stylesheet"
+      href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/5.3.1/css/all.min.css"
+    />
+    <link rel="stylesheet" href="../static/css/sign_in.css" />
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.1.3/dist/css/bootstrap.min.css" rel="stylesheet" integrity="sha384-1BmE4kWBq78iYhFldvKuhfTAU6auU8tT94WrHftjDbrCEXSU1oBoqyl2QvZ6jIW3" crossorigin="anonymous">
+    <style>
+      * {
+        margin: 0;
+        padding: 0;
+        box-sizing: border-box;
+      }
+      body,
+      html {
+        height: 100%;
+        font-family: "Poppins", sans-serif;
+      }
+      a {
+        font-size: 14px;
+        line-height: 1.7;
+        color: #fff;
+        text-decoration: none;
+        margin: 0;
+        transition: all 0.4s;
+      }
+      a:focus {
+        outline: none;
+      }
+      input {
+        outline: none;
+        border: none;
+      }
+      input::-webkit-input-placeholder {
+        color: #8f8fa1;
+      }
+      .container-login100 {
+        width: 100%;
+        min-height: 100vh;
+        display: flex;
+        flex-wrap: wrap;
+        justify-content: center;
+        align-items: center;
+        padding: 15px;
+        background-image: url("../static/images/sign_in.jpeg");
+        background-position: center;
+        background-size: cover;
+        background-repeat: no-repeat;
+        position: relative;
+        z-index: 1;
+      }
+      .container-login100::before {
+        content: "";
+        display: block;
+        position: absolute;
+        z-index: -1;
+        width: 100%;
+        height: 100%;
+        top: 0;
+        left: 0;
+        background-color: rgba(0, 0, 0, 0.6);
+      }
+      .wrap-login100 {
+        width: 500px;
+        background-color: rgba(255, 255, 255, 0.2);
+        border-radius: 10px;
+        position: relative;
+      }
+      .login100-form {
+        width: 100%;
+      }
+      .login100-form-title {
+        font-size: 25px;
+        color: #403866;
+        line-height: 1.2;
+        text-transform: uppercase;
+        text-align: center;
+        width: 100%;
+        display: block;
+        margin-bottom: 40px;
+      }
+      .login100-form-title i {
+        font-size: 50px;
+        color: #fff;
+        border: 1.5px solid #00b665;
+        width: 100px;
+        border-radius: 100%;
+        height: 100px;
+        line-height: 90px;
+        transition: 0.5s ease-in-out;
+      }
+
+      .wrap-input100 {
+        width: 100%;
+        position: relative;
+        background-color: #e6e6e6;
+        border: 1px solid transparent;
+        border-radius: 3px;
+      }
+      .input100 {
+        color: #403866;
+        line-height: 1.2;
+        font-size: 16px;
+        display: block;
+        width: 100%;
+        background-color: #f8f8f9;
+        height: 52px;
+        padding: 0px 20px 0px;
+        border-radius: 6px;
+      }
+      .focus-input100 {
+        position: absolute;
+        display: block;
+        width: calc(100% + 2px);
+        height: calc(100% + 2px);
+        top: -1px;
+        left: -1px;
+        pointer-events: none;
+        border: 2px solid #00b665;
+        border-radius: 3px;
+        visibility: hidden;
+        opacity: 0;
+        -webkit-transition: all 0.4s;
+        transition: all 0.4s;
+        -webkit-transform: scaleX(1.1) scaleY(1.3);
+        transform: scaleX(1.1) scaleY(1.3);
+      }
+      .input100:focus + .focus-input100 {
+        visibility: visible;
+        opacity: 1;
+        -webkit-transform: scale(1);
+        transform: scale(1);
+      }
+      .container-login100-form-btn {
+        width: 100%;
+        display: flex;
+        flex-wrap: wrap;
+      }
+      .login100-form-btn {
+        font-size: 16px;
+        color: #fff;
+        line-height: 1.2;
+        text-transform: uppercase;
+        display: flex;
+        justify-content: center;
+        align-items: center;
+        padding: 0 20px;
+        width: 100%;
+        height: 52px;
+        cursor: pointer;
+        background-color: #00b665;
+        border-radius: 6px;
+        transition: all 0.4s;
+        -webkit-transition: all 0.4s;
+      }
+      .login100-form-btn:hover {
+        background-color: #00b665;
+      }
+      .p-t-50 {
+        padding-top: 50px;
+      }
+      .p-b-90 {
+        padding-bottom: 90px;
+      }
+      .p-l-50 {
+        padding-left: 50px;
+      }
+      .p-r-50 {
+        padding-right: 50px;
+      }
+      .m-t-17 {
+        margin-top: 17px;
+      }
+      .m-b-16 {
+        margin-bottom: 16px;
+      }
+
+      .w-full {
+        width: 100%;
+      }
+      .m-auto {
+        margin: auto;
+      }
+      #captchaBox {
+        display: flex;
+        justify-content: center;
+        align-items: center;
+        width: 100%;
+        height: 35px;
+        font-family: monospace;
+        background-color: #f8f8f9;
+        border: 1px solid transparent;
+        border-radius: 6px;
+        margin-top: 10px;
+        padding: 5px;
+      }
+      .error-message {
+        display: none;
+        color: #ff0000;
+        font-size: 14px;
+        margin-bottom: 10px;
+        text-align: center;
+      }
+      .refresh-captcha {
+        color: #fff;
+        text-align: center;
+        margin-top: 10px;
+        cursor: pointer;
+      }
+      .input-label {
+        display: block;
+        color: rgb(181, 179, 195);
+        font-size: 13px;
+        font-weight: 500;
+        margin-bottom: 4px;
+        text-align: left;
+      }
+    </style>
+    <script>
+        function generateCaptcha() {
+            const chars = "ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789";
+            let captcha = "";
+            let captchaHTML = "";
+
+            for (let i = 0; i < 6; i++) {
+                let char = chars.charAt(Math.floor(Math.random() * chars.length));
+                let color = `rgb(${Math.floor(Math.random() * 200)}, ${Math.floor(Math.random() * 100 + 100)}, ${Math.floor(Math.random() * 200)})`;
+                captcha += char;
+                captchaHTML += `<span style="color:${color}; font-size:20px; font-weight:bold; margin: 2px;">${char}</span>`;
+            }
+
+            document.getElementById('captchaBox').innerHTML = captchaHTML;
+            document.getElementById('hiddenCaptcha').value = captcha;
+        }
+
+        function validateCaptcha(event) {
+            event.preventDefault();
+            let enteredCaptcha = document.getElementById("captcha").value;
+            let actualCaptcha = document.getElementById("hiddenCaptcha").value;
+            let errorMessage = document.getElementById("captchaError");
+
+            if (enteredCaptcha !== actualCaptcha) {
+                errorMessage.style.display = "block";
+                return false;
+            }
+            document.getElementById("loginForm").submit();
+        }
+
+        function togglePassword() {
+            let passwordField = document.getElementById("password");
+            let toggleIcon = document.getElementById("toggleEye");
+
+            if (passwordField.type === "password") {
+                passwordField.type = "text";
+                toggleIcon.classList.remove("fa-eye");
+                toggleIcon.classList.add("fa-eye-slash");
+            } else {
+                passwordField.type = "password";
+                toggleIcon.classList.remove("fa-eye-slash");
+                toggleIcon.classList.add("fa-eye");
+            }
+        }
+    </script>
+  </head>
+  <body onload="generateCaptcha()">
+    <div>
+      {% for message in messages %}
+      <div class="alert alert-danger" role="alert">{{message}}</div>
+      {% endfor %}
+    </div>
+    <div class="container-login100">
+      <div class="wrap-login100 p-t-50 p-b-90 p-l-50 p-r-50">
+        <form id="loginForm" class="login100-form flex-sb flex-w" action="{% url 'login' %}" method="post" onsubmit="return validateCaptcha(event)">
+          {% csrf_token %}
+          <span class="login100-form-title">
+            <i class="fas fa-user"></i>
+          </span>
+          
+          <label class="input-label" for="username">Username</label>
+          <div class="wrap-input100 m-b-16">
+            <input class="input100" type="text" name="username" id="username" placeholder="Username" required />
+            <span class="focus-input100"></span>
+          </div>
+
+          <label class="input-label" for="password">Password</label>
+          <div class="wrap-input100 m-b-16">
+            <input class="input100" type="password" name="password" id="password" placeholder="Password" required />
+            <span class="focus-input100"></span>
+            <i class="fas fa-eye" id="toggleEye" onclick="togglePassword()" style="position: absolute; right: 20px; top: 50%; transform: translateY(-50%); cursor: pointer;"></i>
+          </div>
+
+          <label class="input-label" for="captcha">Enter Captcha</label>
+          <div class="wrap-input100 m-b-16">
+            <input class="input100" type="text" id="captcha" name="captcha" placeholder="Enter Captcha" required />
+            <span class="focus-input100"></span>
+          </div>
+          <div id="captchaError" class="error-message">Incorrect Captcha! Please try again.</div>
+
+          <div id="captchaBox"></div>
+          <input type="hidden" id="hiddenCaptcha" name="hidden_captcha">
+          <a href="#" class="refresh-captcha" onclick="generateCaptcha()">Refresh Captcha</a>
+
+          <div class="container-login100-form-btn m-t-17">
+            <div class="w-full beforeNone text-center">
+              <input
+                type="submit"
+                class="nv-login-submit login100-form-btn"
+                value="Sign in"
+              />
+            </div>
+          </div>
+          <div class="container-login100-form-btn m-t-17">
+
+            <a href="{% url 'password_reset' %}" style="color: #00b665;">Forgot Password?</a>
+          </div>
+        </form>
+      </div>
+    </div>
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.1.3/dist/js/bootstrap.bundle.min.js" integrity="sha384-ka7Sk0Gln4gmtz2MlQnikT1wXgYsOg+OMhuP+IlRH9sENBO0LRn5q+8nbTov4+1p" crossorigin="anonymous"></script>
+  </body>
+</html>

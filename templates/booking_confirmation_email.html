@@ -1,0 +1,108 @@
+{% autoescape off %}
+<!DOCTYPE html>
+<html>
+<head>
+    <meta charset="utf-8">
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            line-height: 1.6;
+            color: #333;
+            max-width: 600px;
+            margin: 0 auto;
+            padding: 20px;
+        }
+        h1 {
+            color: #00c853;
+            font-size: 20px;
+            margin-bottom: 5px;
+        }
+        .company-name {
+            margin-top: 0;
+            margin-bottom: 20px;
+        }
+        .booking-details {
+            margin: 20px 0;
+            background-color: #f9f9f9;
+            padding: 15px;
+            border-radius: 5px;
+        }
+        .booking-details-title {
+            color: #00c853;
+            margin: 15px 0;
+        }
+        .detail-row {
+            margin: 10px 0;
+        }
+        .important-note {
+            background-color: #fff8e1;
+            padding: 10px 15px;
+            margin: 15px 0;
+            border-radius: 5px;
+        }
+        .important-note ul {
+            margin: 5px 0;
+            padding-left: 20px;
+        }
+        hr {
+            border: none;
+            border-top: 1px solid #00c853;
+            margin: 10px 0;
+        }
+        .booking-ref {
+            background-color: #e8f5e9;
+            padding: 10px;
+            border-radius: 5px;
+            text-align: center;
+            margin: 15px 0;
+        }
+        .time-info {
+            color: #666;
+            font-style: italic;
+            margin: 5px 0;
+        }
+    </style>
+</head>
+<body>
+    <h1>Booking Confirmation</h1>
+    <div class="company-name">The SK Sports Park</div>
+    <hr>
+
+    <p>Dear {{ name }},</p>
+    <p>Thank you for choosing The SK Sports Park! Your turf reservation has been successfully confirmed.</p>
+
+    <div class="booking-ref">
+        <strong>Booking Reference:</strong> {{ payment_id }}
+    </div>
+
+    <div class="booking-details">
+        <div class="booking-details-title">Booking Details</div>
+        <div class="detail-row"><strong>Booking Date:</strong> {{ selected_date }}</div>
+        <div class="detail-row"><strong>Time Slots:</strong> {% for slot in slots %}{{ slot }}{% if not forloop.last %}, {% endif %}{% endfor %}</div>
+        <div class="detail-row"><strong>Amount Paid:</strong> ₹{{ amount }}</div>
+        <div class="detail-row"><strong>Payment Method:</strong> {{ payment_method }}</div>
+        <div class="detail-row"><strong>Venue:</strong> The SK Sports Park</div>
+        <div class="time-info">Booking made on: {{ current_date }} at {{ booking_time }}</div>
+    </div>
+
+    <div class="important-note">
+        <strong>Important Information:</strong>
+        <ul>
+            <li>Please arrive 10 minutes before your scheduled time slot</li>
+            <li>Bring your own sports equipment (if required)</li>
+            <li>Wear appropriate sports footwear</li>
+            <li>Keep this email as proof of your booking</li>
+            <li>In case of any issues, quote your booking reference: {{ payment_id }}</li>
+        </ul>
+    </div>
+
+    <p>We're excited to have you at The SK Sports Park! If you need to make any changes to your booking or have questions, please contact us with your booking reference number.</p>
+
+    <hr>
+    <p style="font-size: 12px; color: #666;">
+        This is an automated confirmation email. Please do not reply to this email.<br>
+        For support, please contact us through our website or call our support line.
+    </p>
+</body>
+</html>
+{% endautoescape %} 

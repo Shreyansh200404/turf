@@ -1,0 +1,205 @@
+{% load static %}
+<!DOCTYPE html>
+<html lang="en">
+    <head>
+        <meta charset="UTF-8">
+        <meta name="viewport" content="width=device-width, initial-scale=1.0">
+        <title>Book The SK Sports Turf</title>
+        <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.1.3/dist/css/bootstrap.min.css" rel="stylesheet">
+        <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/5.15.4/css/all.min.css" rel="stylesheet">
+        <style>
+            body {
+                min-height: 100vh;
+                display: flex;
+                flex-direction: column;
+                background-color: #f8f9fa;
+            }
+            .navbar { background-color: #212529; }
+            .navbar-brand, .nav-link { color: white !important; }
+            .main-content {
+                flex: 1;
+                display: flex;
+                align-items: center;
+                padding: 20px 0;
+            }
+            .turf-card {
+                background: white;
+                border-radius: 15px;
+                box-shadow: 0 2px 15px rgba(0,0,0,0.1);
+                overflow: hidden;
+                height: 100%;
+            }
+            .turf-image {
+                width: 100%;
+                height: 300px;
+                object-fit: cover;
+            }
+            .feature-icon {
+                width: 24px;
+                margin-right: 10px;
+                color: #28a745;
+            }
+            .price-tag {
+                color: #007bff;
+                font-size: 24px;
+                font-weight: bold;
+            }
+            .booking-steps {
+                background: white;
+                border-radius: 15px;
+                padding: 20px;
+                height: 100%;
+            }
+            .step-number {
+                width: 40px;
+                height: 40px;
+                background: #007bff;
+                color: white;
+                border-radius: 50%;
+                display: flex;
+                align-items: center;
+                justify-content: center;
+                font-weight: bold;
+                margin: 0 auto 10px;
+            }
+            .highlights {
+                margin-top: 20px;
+                display: grid;
+                grid-template-columns: repeat(3, 1fr);
+                gap: 15px;
+            }
+            .highlight-box {
+                background: #f8f9fa;
+                padding: 15px;
+                border-radius: 10px;
+                text-align: center;
+                border: 1px solid #dee2e6;
+            }
+            .highlight-icon {
+                font-size: 24px;
+                color: #28a745;
+                margin-bottom: 10px;
+            }
+            .highlight-number {
+                font-size: 20px;
+                font-weight: bold;
+                color: #007bff;
+                margin-bottom: 5px;
+            }
+            .footer {
+                background: #212529;
+                color: white;
+                padding: 15px 0;
+                margin-top: auto;
+                text-align: center;
+            }
+        </style>
+    </head>
+    <body>
+        <!-- Navbar -->
+        <nav class="navbar navbar-expand-lg">
+            <div class="container">
+                <a class="navbar-brand" href="/">The SK Sports Turf</a>
+                <div class="navbar-nav ms-auto">
+                    <a class="nav-link" href="/">Home</a>
+                    {% if user.is_authenticated %}
+                    <a class="nav-link" href="/logout">Logout</a>
+                    {% else %}
+                    <a class="nav-link" href="/login">Login</a>
+                    {% endif %}
+                </div>
+            </div>
+        </nav>
+
+        <!-- Main Content -->
+        <div class="container main-content">
+            <div class="row w-100">
+                <!-- Turf Details Card -->
+                <div class="col-md-6">
+                    <div class="turf-card">
+                        <img src="{% static 'images/new_turf.jpeg' %}" alt="Turf" class="turf-image">
+                        <div class="p-4">
+                            <h2>The SK Sports Turf</h2>
+                            <p class="text-muted">The best sports turf in town with world-class facilities.</p>
+                            
+                            <h5 class="mb-3">Features:</h5>
+                            <div class="row mb-3">
+                                <div class="col-6">
+                                    <p><i class="fas fa-futbol feature-icon"></i> Standard size turf</p>
+                                    <p><i class="fas fa-car feature-icon"></i> Parking space</p>
+                                </div>
+                                <div class="col-6">
+                                    <p><i class="fas fa-tshirt feature-icon"></i> Changing rooms</p>
+                                    <p><i class="fas fa-lightbulb feature-icon"></i> Floodlights</p>
+                                </div>
+                            </div>
+                            
+                            <div class="d-flex justify-content-between align-items-center">
+                                <div>
+                                    <span class="price-tag">₹500</span>
+                                    <span class="text-muted">/hour</span>
+                                </div>
+                                <a href="/turf_details" class="btn btn-success">Select Date & Book</a>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Booking Steps -->
+                <div class="col-md-6">
+                    <div class="booking-steps">
+                        <h2 class="text-center mb-4">How to Book?</h2>
+                        <p class="text-center text-muted mb-4">Quick and easy steps to book your turf slot</p>
+                        
+                        <div class="row text-center">
+                            <div class="col-md-4">
+                                <div class="step-number">1</div>
+                                <h5>Choose Date</h5>
+                                <p class="text-muted small">Select your preferred date</p>
+                            </div>
+                            <div class="col-md-4">
+                                <div class="step-number">2</div>
+                                <h5>Select Time</h5>
+                                <p class="text-muted small">Pick available slots</p>
+                            </div>
+                            <div class="col-md-4">
+                                <div class="step-number">3</div>
+                                <h5>Payment</h5>
+                                <p class="text-muted small">Book securely</p>
+                            </div>
+                        </div>
+
+                        <div class="highlights">
+                            <div class="highlight-box">
+                                <i class="fas fa-clock highlight-icon"></i>
+                                <div class="highlight-number">6 AM - 11 PM</div>
+                                <div class="text-muted">Operating Hours</div>
+                            </div>
+                            <div class="highlight-box">
+                                <i class="fas fa-shield-alt highlight-icon"></i>
+                                <div class="highlight-number">100%</div>
+                                <div class="text-muted">Secure Booking</div>
+                            </div>
+                            <div class="highlight-box">
+                                <i class="fas fa-bolt highlight-icon"></i>
+                                <div class="highlight-number">Instant</div>
+                                <div class="text-muted">Confirmation</div>
+                            </div>
+                        </div>
+
+                        
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Footer -->
+        <footer class="footer">
+            <div class="container">
+                <p class="mb-0">© 2023 The SK Sports Turf. All Rights Reserved.</p>
+            </div>
+        </footer>
+
+        <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.1.3/dist/js/bootstrap.bundle.min.js"></script>
+    </body>
+</html>

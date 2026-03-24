@@ -1,0 +1,335 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Payment Successful</title>
+    <link href="https://fonts.googleapis.com/css?family=Nunito+Sans:400,400i,700,900&display=swap" rel="stylesheet">
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.0.2/dist/css/bootstrap.min.css" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/5.15.3/css/all.min.css">
+    <style>
+        html, body {
+            height: 100%;
+            margin: 0;
+            overflow: hidden;
+            background: #EBF0F5;
+        }
+        
+        body {
+            text-align: center;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }
+        
+        .container {
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            height: 100%;
+        }
+        
+        .card {
+            background: white;
+            padding: 30px;
+            border-radius: 4px;
+            box-shadow: 0 2px 3px #C8D0D8;
+            display: inline-block;
+            margin: 0 auto;
+            max-width: 500px;
+            width: 90%;
+            max-height: 95vh;
+            overflow-y: auto;
+        }
+        
+        .success-icon {
+            width: 100px;
+            height: 100px;
+            background-color: #F8FAF5;
+            border-radius: 50%;
+            margin: 0 auto 20px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }
+        
+        .success-icon i {
+            color: #9ABC66;
+            font-size: 60px;
+        }
+        
+        h1 {
+            color: #9ABC66;
+            font-family: "Nunito Sans", "Helvetica Neue", sans-serif;
+            font-weight: 900;
+            font-size: 30px;
+            margin-bottom: 5px;
+        }
+        
+        p {
+            color: #404F5E;
+            font-family: "Nunito Sans", "Helvetica Neue", sans-serif;
+            font-size: 18px;
+            margin: 0;
+            margin-bottom: 15px;
+        }
+        
+        .info-badge {
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            background-color: #FFF9E6;
+            border-radius: 30px;
+            padding: 6px 15px;
+            margin: 0 auto 15px;
+            max-width: 220px;
+        }
+        
+        .info-badge i {
+            color: #856404;
+            font-size: 16px;
+            margin-right: 6px;
+        }
+        
+        .info-badge span {
+            color: #856404;
+            font-weight: bold;
+            font-size: 12px;
+        }
+        
+        .mobile-icon {
+            color: #9ABC66;
+            font-size: 32px;
+            margin-bottom: 15px;
+        }
+        
+        .transaction-details {
+            background-color: #F9F9F9;
+            border-radius: 8px;
+            padding: 15px;
+            margin-bottom: 15px;
+            text-align: left;
+        }
+        
+        .transaction-details h3 {
+            color: #404F5E;
+            font-size: 16px;
+            font-weight: bold;
+            margin-bottom: 10px;
+            padding-bottom: 8px;
+            border-bottom: 1px solid #EEE;
+        }
+        
+        .detail-row {
+            display: flex;
+            justify-content: space-between;
+            margin-bottom: 6px;
+            font-size: 14px;
+        }
+        
+        .detail-row .label {
+            color: #6c757d;
+        }
+        
+        .detail-row .value {
+            color: #404F5E;
+            font-weight: 600;
+        }
+        
+        .detail-row .completed {
+            color: #28a745;
+            font-weight: bold;
+        }
+        
+        .small-notice {
+            font-size: 11px;
+            color: #6c757d;
+            margin-bottom: 15px;
+            padding: 0 10px;
+        }
+        
+        .btn-action {
+            background-color: #9ABC66;
+            color: white;
+            border: none;
+            border-radius: 5px;
+            padding: 8px 16px;
+            margin: 0 4px;
+            font-weight: bold;
+            font-size: 14px;
+            text-decoration: none;
+            transition: all 0.3s;
+            display: inline-block;
+        }
+        
+        .btn-action:hover {
+            background-color: #8aaa59;
+            color: white;
+        }
+        
+        .btn-secondary {
+            background-color: #6c757d;
+        }
+        
+        .btn-secondary:hover {
+            background-color: #5a6268;
+        }
+        
+        @media (max-height: 700px) {
+            .card {
+                padding: 20px;
+            }
+            
+            .success-icon {
+                width: 80px;
+                height: 80px;
+                margin-bottom: 15px;
+            }
+            
+            .success-icon i {
+                font-size: 45px;
+            }
+            
+            h1 {
+                font-size: 24px;
+                margin-bottom: 3px;
+            }
+            
+            p {
+                font-size: 16px;
+                margin-bottom: 10px;
+            }
+            
+            .mobile-icon {
+                font-size: 28px;
+                margin-bottom: 10px;
+            }
+            
+            .transaction-details {
+                padding: 12px;
+                margin-bottom: 10px;
+            }
+            
+            .transaction-details h3 {
+                font-size: 14px;
+                margin-bottom: 8px;
+                padding-bottom: 6px;
+            }
+            
+            .detail-row {
+                margin-bottom: 4px;
+                font-size: 12px;
+            }
+            
+            .small-notice {
+                font-size: 10px;
+                margin-bottom: 10px;
+            }
+            
+            .btn-action {
+                padding: 6px 12px;
+                font-size: 12px;
+            }
+        }
+        
+        .alert {
+            transition: opacity 0.5s ease-in-out;
+        }
+        .alert.fade-out {
+            opacity: 0;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div class="card">
+            <!-- Django Messages Section -->
+            {% if messages %}
+            <div class="messages-container mb-3">
+                {% for message in messages %}
+                <div class="alert alert-{% if message.tags == 'success' %}success{% elif message.tags == 'error' %}danger{% elif message.tags == 'warning' %}warning{% else %}info{% endif %} alert-dismissible fade show" role="alert">
+                    {{ message }}
+                    <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
+                </div>
+                {% endfor %}
+            </div>
+            {% endif %}
+            <!-- End Django Messages Section -->
+            
+            <div class="success-icon">
+                <i class="fas fa-check"></i>
+            </div>
+            
+            <h1>Payment Successful</h1>
+            <p>Your turf booking has been confirmed!</p>
+            
+            <div class="info-badge">
+                <i class="fas fa-info-circle"></i>
+                <span>DUMMY TRANSACTION</span>
+            </div>
+            
+            <div class="mobile-icon">
+                <i class="fas fa-mobile-alt"></i>
+            </div>
+            
+            <div class="transaction-details">
+                <h3>Transaction Details</h3>
+                <div class="detail-row">
+                    <div class="label">Status:</div>
+                    <div class="value completed">Completed</div>
+                </div>
+                <div class="detail-row">
+                    <div class="label">Transaction ID:</div>
+                    <div class="value">{{ booking.payment_id }}</div>
+                </div>
+                <div class="detail-row">
+                    <div class="label">Date:</div>
+                    <div class="value">{{ booking.selected_date }}</div>
+                </div>
+                <div class="detail-row">
+                    <div class="label">Payment Method:</div>
+                    <div class="value">
+                        {% if booking.payment_method == 'credit_card' %}
+                            Credit/Debit Card
+                        {% elif booking.payment_method == 'upi' %}
+                            UPI
+                        {% elif booking.payment_method == 'net_banking' %}
+                            Net Banking
+                        {% elif booking.payment_method == 'wallet' %}
+                            Wallet
+                        {% else %}
+                            Other
+                        {% endif %}
+                    </div>
+                </div>
+            </div>
+            
+            <p class="small-notice">
+                This was a simulated payment. No actual payment was processed and no financial information was stored.
+            </p>
+            
+            <div class="action-buttons">
+                <a href="/" class="btn-action">Back to Home</a>
+                <a href="/orderHistory/" class="btn-action btn-secondary">View My Bookings</a>
+            </div>
+        </div>
+    </div>
+    <script>
+        document.addEventListener('DOMContentLoaded', function() {
+            // Get all alert messages
+            const alerts = document.querySelectorAll('.alert');
+            
+            alerts.forEach(alert => {
+                // Set timeout to start fade out after 4 seconds
+                setTimeout(() => {
+                    alert.classList.add('fade-out');
+                    // Remove the element after fade animation
+                    setTimeout(() => {
+                        alert.remove();
+                    }, 500); // 500ms matches the CSS transition duration
+                }, 4000); // 4 seconds delay
+            });
+        });
+    </script>
+</body>
+</html>
