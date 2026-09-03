@@ -1,1 +1,13 @@
+# Virtual environments
+venv/
+env/
 
+# Python cache
+__pycache__/
+*.py[cod]
+
+# Django generated files
+staticfiles/
+
+# Environment secrets
+.env

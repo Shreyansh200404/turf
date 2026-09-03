@@ -1,1 +1,1 @@
-web: gunicorn surftheturf.wsgi  --log-file -
+web: gunicorn SKSportsPark.wsgi
