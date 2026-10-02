@@ -13,6 +13,11 @@ urlpatterns = [
     path("slot_details/", views.slot_details, name="slot_details"),
     path("login/", views.login, name="login"),
     path("signup/", views.signup, name="signup"),
+    path(
+        'confirm/<uidb64>/<token>/',
+        views.confirm_email,
+        name='confirm_email',
+    ),
     path("logout/", views.logout, name="logout"),
     path('turfBilling/', views.turfBilling, name='turfBilling'),
     path('orderHistory/', views.orderHistory, name="orderHistory"),
@@ -33,18 +38,21 @@ urlpatterns = [
     path('owner/settings/', views.owner_settings, name='owner_settings'),
     path('owner/analytics/', views.owner_analytics, name='owner_analytics'),
 
-    # Password Reset URLs
-    path('password_reset/', auth_views.PasswordResetView.as_view(
-        template_name='password_reset.html',
-        email_template_name='email.html',
-        subject_template_name='email.txt'
-    ), name='password_reset'),
+    # Password reset by email OTP
+    path('password_reset/', views.password_reset, name='password_reset'),
+    path(
+        'password_reset/verify/',
+        views.password_reset_verify,
+        name='password_reset_verify',
+    ),
+    path(
+        'password_reset/new-password/',
+        views.password_reset_new_password,
+        name='password_reset_new_password',
+    ),
     path('password_reset/done/', auth_views.PasswordResetDoneView.as_view(
         template_name='password_reset_done.html'
     ), name='password_reset_done'),
-    path('reset/<uidb64>/<token>/', auth_views.PasswordResetConfirmView.as_view(
-        template_name='password_reset_confirm.html'
-    ), name='password_reset_confirm'),
     path('reset/done/', auth_views.PasswordResetCompleteView.as_view(
         template_name='password_reset_complete.html'
     ), name='password_reset_complete'),

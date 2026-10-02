@@ -209,13 +209,13 @@
                             </div>
                         </div>
 
-                        {% if currentDate < i.selected_date %}
-
-                        <a href="{% url 'delete_booking' i.id %}"
-                            class="btn btn-outline-danger btn-cancel">
+                        {% if i.can_cancel %}
+                        <button type="button"
+                            class="btn btn-outline-danger btn-cancel"
+                            data-bs-toggle="modal"
+                            data-bs-target="#cancelBooking{{ i.id }}">
                             Cancel Booking
-                        </a>
-
+                        </button>
                         {% endif %}
 
                     </div>
@@ -229,10 +229,11 @@
     </div>
 
     <!-- Modal -->
+    {% if i.can_cancel %}
     <div class="modal fade"
-        id="exampleModal{{i.id}}"
+        id="cancelBooking{{i.id}}"
         tabindex="-1"
-        aria-labelledby="exampleModalLabel"
+        aria-labelledby="cancelBookingLabel{{i.id}}"
         aria-hidden="true">
 
         <div class="modal-dialog">
@@ -241,11 +242,8 @@
 
                 <div class="modal-header">
 
-                    <h5 class="modal-title"
-                        id="exampleModalLabel">
-
+                    <h5 class="modal-title" id="cancelBookingLabel{{i.id}}">
                         Turf Booking Cancellation
-
                     </h5>
 
                     <button type="button"
@@ -256,7 +254,13 @@
                 </div>
 
                 <div class="modal-body">
-                    Are you sure you want to cancel your booking?
+                    {% if i.refund_eligible %}
+                    Cancelling now is at least 2 hours before the slot start. A refund of Rs. {{ i.amount }} will be requested from Razorpay.
+                    {% elif i.is_dummy_payment %}
+                    Are you sure you want to cancel? This demo payment did not charge real money and cannot be refunded.
+                    {% else %}
+                    Are you sure you want to cancel? This is less than 2 hours before the slot start, so no refund will be issued.
+                    {% endif %}
                 </div>
 
                 <div class="modal-footer">
@@ -269,15 +273,14 @@
 
                     </button>
 
-                    <form action="{% url 'delete_booking' i.id %}"
-                        method="post">
+                    <form action="{% url 'delete_booking' i.id %}" method="post">
 
                         {% csrf_token %}
 
                         <button type="submit"
                             class="btn btn-danger">
 
-                            Yes
+                            Cancel booking
 
                         </button>
 
@@ -290,6 +293,7 @@
         </div>
 
     </div>
+    {% endif %}
 
     {% endfor %}
 

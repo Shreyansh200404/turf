@@ -193,7 +193,14 @@
                                             <td>{{ payment.current_date }}</td>
                                             <td>₹{{ payment.amount }}</td>
                                             <td>{{ payment.payment_method }}</td>
-                                            <td><span class="badge bg-success">Completed</span></td>
+                                            <td>
+                                                {% if payment.cancelled %}
+                                                <span class="badge bg-secondary">Cancelled</span>
+                                                <div class="small">Refund: {{ payment.refund_status }}</div>
+                                                {% else %}
+                                                <span class="badge bg-success">Completed</span>
+                                                {% endif %}
+                                            </td>
                                             <td>
                                                 <a href="#" class="btn btn-info btn-sm" data-bs-toggle="modal" data-bs-target="#viewModal{{ payment.id }}"><i class="fas fa-eye"></i></a>
                                             </td>
@@ -218,7 +225,17 @@
                                                             <div class="col-md-6">
                                                                 <p><strong>Amount:</strong> ₹{{ payment.amount }}</p>
                                                                 <p><strong>Payment Method:</strong> {{ payment.payment_method }}</p>
-                                                                <p><strong>Status:</strong> <span class="badge bg-success">Completed</span></p>
+                                                                <p><strong>Status:</strong>
+                                                                    {% if payment.cancelled %}
+                                                                    <span class="badge bg-secondary">Cancelled</span>
+                                                                    {% else %}
+                                                                    <span class="badge bg-success">Completed</span>
+                                                                    {% endif %}
+                                                                </p>
+                                                                {% if payment.cancelled %}
+                                                                <p><strong>Refund status:</strong> {{ payment.refund_status }}</p>
+                                                                {% if payment.refund_id %}<p><strong>Refund ID:</strong> {{ payment.refund_id }}</p>{% endif %}
+                                                                {% endif %}
                                                                 <p><strong>Transaction Date:</strong> {{ payment.current_date }}</p>
                                                             </div>
                                                         </div>

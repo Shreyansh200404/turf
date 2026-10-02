@@ -265,7 +265,7 @@
             
             <div class="info-badge">
                 <i class="fas fa-info-circle"></i>
-                <span>DUMMY TRANSACTION</span>
+                <span>{% if booking.is_dummy_payment %}DEMO TRANSACTION{% else %}RAZORPAY PAYMENT{% endif %}</span>
             </div>
             
             <div class="mobile-icon">
@@ -295,6 +295,10 @@
                             UPI
                         {% elif booking.payment_method == 'net_banking' %}
                             Net Banking
+                        {% elif booking.payment_method == 'netbanking' %}
+                            Net Banking
+                        {% elif booking.payment_method == 'card' %}
+                            Card
                         {% elif booking.payment_method == 'wallet' %}
                             Wallet
                         {% else %}
@@ -305,7 +309,11 @@
             </div>
             
             <p class="small-notice">
+                {% if booking.is_dummy_payment %}
                 This was a simulated payment. No actual payment was processed and no financial information was stored.
+                {% else %}
+                Your payment was securely processed by Razorpay. No card or bank details are stored by SK Sports Park.
+                {% endif %}
             </p>
             
             <div class="action-buttons">

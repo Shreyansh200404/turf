@@ -26,9 +26,14 @@ class TurfBooked(models.Model):
     slots = models.TextField(default="")
     
     payment_id = models.CharField(max_length=100)
+    razorpay_order_id = models.CharField(max_length=100, blank=True)
     payment_method = models.CharField(max_length=50, default="credit_card")
     paid = models.BooleanField(default=False)
     is_dummy_payment = models.BooleanField(default=True)
+    cancelled = models.BooleanField(default=False)
+    cancelled_at = models.DateTimeField(null=True, blank=True)
+    refund_id = models.CharField(max_length=100, blank=True)
+    refund_status = models.CharField(max_length=20, default="not_applicable")
 
 class TurfSettings(models.Model):
     name = models.CharField(max_length=200, default="The SK Sports Turf")

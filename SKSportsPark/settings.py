@@ -80,7 +80,7 @@ WSGI_APPLICATION = 'SKSportsPark.wsgi.application'
 DATABASES = {
    'default': {
         'ENGINE': 'django.db.backends.mysql',
-        'NAME': 'sk_turf33',
+        'NAME': 'turf_DB',
         'USER': 'root',
         'PASSWORD': 'Admin@123',
         'HOST': 'localhost',
@@ -129,6 +129,7 @@ AUTH_PASSWORD_VALIDATORS = [
 LANGUAGE_CODE = 'en-us'
 
 TIME_ZONE = 'UTC'
+TURF_TIME_ZONE = os.environ.get('TURF_TIME_ZONE', 'Asia/Kolkata')
 
 USE_I18N = True
 
@@ -161,9 +162,11 @@ DEFAULT_AUTO_FIELD = 'django.db.models.BigAutoField'
 # URL settings
 APPEND_SLASH = True
 
-# Razorpay Settings - Disabled for offline mode
-RAZOR_KEY_ID = ''
-RAZOR_KEY_SECRET = ''
+# Razorpay test mode is the safe default. Use a matching key ID and secret from
+# the same Razorpay mode; live mode must be selected explicitly.
+RAZORPAY_MODE = os.environ.get('RAZORPAY_MODE', 'test').strip().lower()
+RAZOR_KEY_ID = os.environ.get('RAZOR_KEY_ID', 'rzp_test_Tivey8y8iXv7SX').strip()
+RAZOR_KEY_SECRET = os.environ.get('RAZOR_KEY_SECRET', 'VqqV9ZosmRGsCz9eMIXrVM7I').strip()
 
 # Offline Mode Settings
 OFFLINE_MODE = False  # Set to False to enable online features

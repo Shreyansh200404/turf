@@ -157,7 +157,9 @@
                                             <td>{{ booking.booking_time }}</td>
                                             <td>₹{{ booking.amount }}</td>
                                             <td>
-                                                {% if booking.paid %}
+                                                {% if booking.cancelled %}
+                                                <span class="badge bg-secondary">Cancelled</span>
+                                                {% elif booking.paid %}
                                                 <span class="badge bg-success">Paid</span>
                                                 {% else %}
                                                 <span class="badge bg-danger">Failed</span>
@@ -165,7 +167,9 @@
                                             </td>
                                             <td>
                                                 <a href="#" class="btn btn-info btn-sm" data-bs-toggle="modal" data-bs-target="#viewModal{{ booking.id }}"><i class="fas fa-eye"></i></a>
+                                                {% if not booking.cancelled %}
                                                 <a href="#" class="btn btn-danger btn-sm" data-bs-toggle="modal" data-bs-target="#deleteModal{{ booking.id }}"><i class="fas fa-trash"></i></a>
+                                                {% endif %}
                                             </td>
                                         </tr>
 
@@ -189,12 +193,18 @@
                                                                 <p><strong>Time Slots:</strong> {{ booking.booking_time }}</p>
                                                                 <p><strong>Amount:</strong> ₹{{ booking.amount }}</p>
                                                                 <p><strong>Status:</strong> 
-                                                                    {% if booking.paid %}
+                                                                    {% if booking.cancelled %}
+                                                                    <span class="badge bg-secondary">Cancelled</span>
+                                                                    {% elif booking.paid %}
                                                                     <span class="badge bg-success">Paid</span>
                                                                     {% else %}
                                                                     <span class="badge bg-danger">Failed</span>
                                                                     {% endif %}
                                                                 </p>
+                                                                {% if booking.cancelled %}
+                                                                <p><strong>Refund status:</strong> {{ booking.refund_status }}</p>
+                                                                {% if booking.refund_id %}<p><strong>Refund ID:</strong> {{ booking.refund_id }}</p>{% endif %}
+                                                                {% endif %}
                                                                 <p><strong>Booking Made On:</strong> {{ booking.current_date }}</p>
                                                             </div>
                                                         </div>
@@ -211,6 +221,7 @@
                                         </div>
                                         
                                         <!-- Delete Modal -->
+                                        {% if not booking.cancelled %}
                                         <div class="modal fade" id="deleteModal{{ booking.id }}" tabindex="-1" aria-labelledby="deleteModalLabel{{ booking.id }}" aria-hidden="true">
                                             <div class="modal-dialog">
                                                 <div class="modal-content">
@@ -232,6 +243,7 @@
                                                 </div>
                                             </div>
                                         </div>
+                                        {% endif %}
                                         {% empty %}
                                         <tr>
                                             <td colspan="8" class="text-center">No bookings found</td>
