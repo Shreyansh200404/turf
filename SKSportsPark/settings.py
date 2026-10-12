@@ -162,11 +162,16 @@ DEFAULT_AUTO_FIELD = 'django.db.models.BigAutoField'
 # URL settings
 APPEND_SLASH = True
 
+
+
 # Razorpay test mode is the safe default. Use a matching key ID and secret from
 # the same Razorpay mode; live mode must be selected explicitly.
-RAZORPAY_MODE = os.environ.get('RAZORPAY_MODE', 'test').strip().lower()
+#RAZORPAY_MODE = os.environ.get('RAZORPAY_MODE', 'test').strip().lower()
 RAZOR_KEY_ID = os.environ.get('RAZOR_KEY_ID', 'rzp_test_Tivey8y8iXv7SX').strip()
 RAZOR_KEY_SECRET = os.environ.get('RAZOR_KEY_SECRET', 'VqqV9ZosmRGsCz9eMIXrVM7I').strip()
+
+#Bank confirmation otp
+#BANK_CONFIRMATION_OTP = os.environ.get('BANK_CONFIRMATION_OTP', 'VqqV9ZosmRGsCz9eMIXrVM7I').strip()
 
 # Offline Mode Settings
 OFFLINE_MODE = False  # Set to False to enable online features

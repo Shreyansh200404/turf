@@ -1,0 +1,822 @@
+{% load static %}
+<!doctype html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+
+    <title>{{ title }} - SK Sports Turf</title>
+
+    <!-- Bootstrap -->
+    <link
+        href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0-alpha1/dist/css/bootstrap.min.css"
+        rel="stylesheet">
+
+    <!-- Font Awesome -->
+    <link
+        rel="stylesheet"
+        href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css">
+
+    <!-- Owner CSS -->
+    <link
+        rel="stylesheet"
+        href="{% static 'css/owner_admin.css' %}">
+
+    <style>
+
+        /* =====================================================
+           PAGE
+        ===================================================== */
+
+        body {
+            background: #f5f7fb;
+        }
+
+        .main-content {
+            padding: 30px;
+        }
+
+
+        /* =====================================================
+           HEADER
+        ===================================================== */
+
+        .page-header {
+            background: #ffffff;
+            border-radius: 16px;
+            padding: 24px 28px;
+            margin-bottom: 25px;
+            border: 1px solid #e9ecef;
+            box-shadow: 0 5px 18px rgba(0, 0, 0, 0.05);
+        }
+
+        .page-title {
+            display: flex;
+            align-items: center;
+            gap: 15px;
+        }
+
+        .page-icon {
+            width: 52px;
+            height: 52px;
+            border-radius: 14px;
+
+            display: flex;
+            align-items: center;
+            justify-content: center;
+
+            background: #e7f1ff;
+            color: #0d6efd;
+
+            font-size: 22px;
+        }
+
+        .page-title h1 {
+            font-size: 27px;
+            font-weight: 700;
+            margin: 0;
+            color: #212529;
+        }
+
+        .page-title p {
+            margin: 4px 0 0;
+            color: #6c757d;
+        }
+
+
+        /* =====================================================
+           BACK BUTTON
+        ===================================================== */
+
+        .back-btn {
+            border-radius: 9px;
+            padding: 10px 17px;
+            font-weight: 600;
+        }
+
+
+        /* =====================================================
+           FORM CARD
+        ===================================================== */
+
+        .form-card {
+            border: none;
+            border-radius: 16px;
+            overflow: hidden;
+
+            background: #ffffff;
+
+            box-shadow: 0 6px 25px rgba(0, 0, 0, 0.07);
+        }
+
+
+        /* =====================================================
+           FORM HEADER
+        ===================================================== */
+
+        .form-card-header {
+            padding: 22px 28px;
+
+            background: linear-gradient(
+                135deg,
+                #f8fbff,
+                #ffffff
+            );
+
+            border-bottom: 1px solid #e9ecef;
+        }
+
+        .form-header-icon {
+            width: 46px;
+            height: 46px;
+
+            border-radius: 12px;
+
+            display: flex;
+            align-items: center;
+            justify-content: center;
+
+            background: #0d6efd;
+            color: white;
+
+            font-size: 19px;
+
+            box-shadow: 0 5px 12px rgba(13, 110, 253, 0.25);
+        }
+
+        .form-header-title {
+            font-size: 19px;
+            font-weight: 700;
+            margin: 0;
+            color: #212529;
+        }
+
+        .form-header-text {
+            color: #6c757d;
+            font-size: 13px;
+            margin: 3px 0 0;
+        }
+
+
+        /* =====================================================
+           FORM BODY
+        ===================================================== */
+
+        .form-card-body {
+            padding: 30px;
+        }
+
+
+        /* =====================================================
+           FORM LABEL
+        ===================================================== */
+
+        .form-label {
+            font-weight: 600;
+            color: #343a40;
+            margin-bottom: 8px;
+        }
+
+        .required {
+            color: #dc3545;
+            margin-left: 3px;
+        }
+
+
+        /* =====================================================
+           FORM INPUT
+        ===================================================== */
+
+        .form-control,
+        .form-select {
+            min-height: 46px;
+
+            border-radius: 9px;
+
+            border: 1px solid #dfe3e8;
+
+            padding: 10px 13px;
+
+            transition: all 0.2s ease;
+        }
+
+        textarea.form-control {
+            min-height: 120px;
+            resize: vertical;
+        }
+
+        .form-control:focus,
+        .form-select:focus {
+            border-color: #0d6efd;
+
+            box-shadow:
+                0 0 0 3px rgba(13, 110, 253, 0.10);
+
+            transform: translateY(-1px);
+        }
+
+
+        /* =====================================================
+           CHECKBOX
+        ===================================================== */
+
+        .checkbox-box {
+            background: #f8f9fa;
+
+            border: 1px solid #e9ecef;
+
+            border-radius: 10px;
+
+            padding: 15px 18px;
+
+            transition: all 0.2s ease;
+        }
+
+        .checkbox-box:hover {
+            background: #f1f6ff;
+            border-color: #b9d5ff;
+        }
+
+        .form-check-input {
+            width: 20px;
+            height: 20px;
+
+            margin-top: 0;
+        }
+
+        .form-check-label {
+            margin-left: 7px;
+            cursor: pointer;
+        }
+
+
+        /* =====================================================
+           HELP TEXT
+        ===================================================== */
+
+        .form-text {
+            color: #6c757d;
+            font-size: 12px;
+            margin-top: 6px;
+        }
+
+
+        /* =====================================================
+           ERRORS
+        ===================================================== */
+
+        .field-error {
+            color: #dc3545;
+            font-size: 13px;
+            margin-top: 6px;
+        }
+
+        .error-card {
+            border: none;
+            border-radius: 10px;
+            background: #fff5f5;
+            color: #842029;
+        }
+
+
+        /* =====================================================
+           FOOTER
+        ===================================================== */
+
+        .form-footer {
+            margin-top: 30px;
+            padding-top: 22px;
+
+            border-top: 1px solid #e9ecef;
+        }
+
+        .required-note {
+            color: #6c757d;
+            font-size: 13px;
+        }
+
+
+        /* =====================================================
+           BUTTONS
+        ===================================================== */
+
+        .btn {
+            border-radius: 9px;
+            font-weight: 600;
+
+            padding: 10px 18px;
+
+            transition: all 0.2s ease;
+        }
+
+        .btn-primary {
+            box-shadow:
+                0 4px 12px rgba(13, 110, 253, 0.18);
+        }
+
+        .btn-primary:hover {
+            transform: translateY(-2px);
+
+            box-shadow:
+                0 6px 15px rgba(13, 110, 253, 0.25);
+        }
+
+        .btn-outline-secondary:hover {
+            transform: translateY(-1px);
+        }
+
+
+        /* =====================================================
+           ALERTS
+        ===================================================== */
+
+        .alert {
+            border: none;
+            border-radius: 10px;
+
+            box-shadow:
+                0 3px 12px rgba(0, 0, 0, 0.04);
+        }
+
+
+        /* =====================================================
+           RESPONSIVE
+        ===================================================== */
+
+        @media (max-width: 768px) {
+
+            .main-content {
+                padding: 20px 15px;
+            }
+
+            .page-header {
+                padding: 20px;
+            }
+
+            .page-title h1 {
+                font-size: 23px;
+            }
+
+            .form-card-body {
+                padding: 20px;
+            }
+
+            .form-card-header {
+                padding: 20px;
+            }
+
+            .form-footer {
+                align-items: flex-start !important;
+                flex-direction: column;
+            }
+
+        }
+
+    </style>
+
+</head>
+
+
+<body class="owner-admin-body">
+
+
+    <!-- =====================================================
+         SIDEBAR
+    ===================================================== -->
+
+    {% include 'owner_sidebar.html' %}
+
+
+    <!-- =====================================================
+         MAIN CONTENT
+    ===================================================== -->
+
+    <main id="owner-admin-main" class="main-content">
+
+        <div class="container-fluid">
+
+
+            <!-- =================================================
+                 PAGE HEADER
+            ================================================= -->
+
+            <div class="page-header">
+
+                <div class="d-flex justify-content-between
+                            align-items-center
+                            flex-wrap gap-3">
+
+                    <div class="page-title">
+
+                        <div class="page-icon">
+
+                            <i class="fas fa-futbol"></i>
+
+                        </div>
+
+                        <div>
+
+                            <h1>
+                                {{ title }}
+                            </h1>
+
+                            <p>
+                                Add or update your turf information
+                            </p>
+
+                        </div>
+
+                    </div>
+
+
+                    <a
+                        href="{% url 'owner_turfs' %}"
+                        class="btn btn-outline-secondary back-btn"
+                    >
+
+                        <i class="fas fa-arrow-left me-2"></i>
+
+                        Back to Turfs
+
+                    </a>
+
+                </div>
+
+            </div>
+
+
+            <!-- =================================================
+                 MESSAGES
+            ================================================= -->
+
+            {% if messages %}
+
+                <div class="mb-4">
+
+                    {% for message in messages %}
+
+                        <div
+                            class="alert
+                            {% if message.tags == 'success' %}
+                                alert-success
+                            {% elif message.tags == 'error' %}
+                                alert-danger
+                            {% elif message.tags == 'warning' %}
+                                alert-warning
+                            {% else %}
+                                alert-info
+                            {% endif %}
+                            alert-dismissible fade show"
+                            role="alert"
+                        >
+
+                            <i
+                                class="fas
+                                {% if message.tags == 'success' %}
+                                    fa-circle-check
+                                {% elif message.tags == 'error' %}
+                                    fa-circle-exclamation
+                                {% elif message.tags == 'warning' %}
+                                    fa-triangle-exclamation
+                                {% else %}
+                                    fa-circle-info
+                                {% endif %}
+                                me-2"
+                            ></i>
+
+                            {{ message }}
+
+                            <button
+                                type="button"
+                                class="btn-close"
+                                data-bs-dismiss="alert"
+                            ></button>
+
+                        </div>
+
+                    {% endfor %}
+
+                </div>
+
+            {% endif %}
+
+
+            <!-- =================================================
+                 FORM
+            ================================================= -->
+
+            <div class="row justify-content-center">
+
+                <div class="col-lg-9 col-xl-8">
+
+
+                    <div class="form-card">
+
+
+                        <!-- FORM HEADER -->
+
+                        <div class="form-card-header">
+
+                            <div class="d-flex align-items-center">
+
+                                <div class="form-header-icon me-3">
+
+                                    <i class="fas fa-pen-to-square"></i>
+
+                                </div>
+
+                                <div>
+
+                                    <h5 class="form-header-title">
+
+                                        Turf Information
+
+                                    </h5>
+
+                                    <p class="form-header-text">
+
+                                        Enter the details of your sports turf
+
+                                    </p>
+
+                                </div>
+
+                            </div>
+
+                        </div>
+
+
+                        <!-- FORM BODY -->
+
+                        <div class="form-card-body">
+
+
+                            <form method="post">
+
+                                {% csrf_token %}
+
+
+                                <!-- NON FIELD ERRORS -->
+
+                                {% if form.non_field_errors %}
+
+                                    <div class="alert error-card mb-4">
+
+                                        <i
+                                            class="fas fa-circle-exclamation me-2">
+                                        </i>
+
+                                        {{ form.non_field_errors }}
+
+                                    </div>
+
+                                {% endif %}
+
+
+                                <!-- FORM FIELDS -->
+
+                                {% for field in form %}
+
+                                    <div class="mb-4">
+
+
+                                        {% if field.field.widget.input_type == 'checkbox' %}
+
+
+                                            <div class="checkbox-box">
+
+                                                <div class="form-check m-0">
+
+                                                    {{ field }}
+
+                                                    <label
+                                                        class="form-check-label fw-semibold"
+                                                        for="{{ field.id_for_label }}"
+                                                    >
+
+                                                        {{ field.label }}
+
+                                                    </label>
+
+                                                </div>
+
+                                            </div>
+
+
+                                        {% else %}
+
+
+                                            <label
+                                                class="form-label"
+                                                for="{{ field.id_for_label }}"
+                                            >
+
+                                                {{ field.label }}
+
+                                                {% if field.field.required %}
+
+                                                    <span class="required">
+                                                        *
+                                                    </span>
+
+                                                {% endif %}
+
+                                            </label>
+
+
+                                            {{ field }}
+
+
+                                        {% endif %}
+
+
+                                        <!-- HELP TEXT -->
+
+                                        {% if field.help_text %}
+
+                                            <div class="form-text">
+
+                                                <i class="fas fa-circle-info me-1"></i>
+
+                                                {{ field.help_text }}
+
+                                            </div>
+
+                                        {% endif %}
+
+
+                                        <!-- ERRORS -->
+
+                                        {% for error in field.errors %}
+
+                                            <div class="field-error">
+
+                                                <i
+                                                    class="fas fa-circle-exclamation me-1">
+                                                </i>
+
+                                                {{ error }}
+
+                                            </div>
+
+                                        {% endfor %}
+
+                                    </div>
+
+                                {% endfor %}
+
+
+                                <!-- =================================================
+                                     FORM FOOTER
+                                ================================================= -->
+
+                                <div class="form-footer">
+
+                                    <div
+                                        class="d-flex
+                                               justify-content-between
+                                               align-items-center
+                                               flex-wrap
+                                               gap-3"
+                                    >
+
+                                        <div class="required-note">
+
+                                            <span class="text-danger">*</span>
+
+                                            Required fields
+
+                                        </div>
+
+
+                                        <div class="d-flex gap-2">
+
+
+                                            <!-- CANCEL -->
+
+                                            <a
+                                                href="{% url 'owner_turfs' %}"
+                                                class="btn btn-outline-secondary"
+                                            >
+
+                                                <i class="fas fa-xmark me-1"></i>
+
+                                                Cancel
+
+                                            </a>
+
+
+                                            <!-- SAVE -->
+
+                                            <button
+                                                type="submit"
+                                                class="btn btn-primary"
+                                            >
+
+                                                <i class="fas fa-save me-1"></i>
+
+                                                Save Turf
+
+                                            </button>
+
+                                        </div>
+
+                                    </div>
+
+                                </div>
+
+
+                            </form>
+
+                        </div>
+
+                    </div>
+
+
+                </div>
+
+            </div>
+
+        </div>
+
+    </main>
+
+
+    <!-- Bootstrap -->
+
+    <script
+        src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0-alpha1/dist/js/bootstrap.bundle.min.js">
+    </script>
+
+
+    <!-- =====================================================
+         FORM STYLING
+    ===================================================== -->
+
+    <script>
+
+        /* Text inputs */
+
+        document.querySelectorAll(
+            'input:not([type=checkbox]):not([type=radio]), textarea'
+        ).forEach(function(field) {
+
+            field.classList.add('form-control');
+
+        });
+
+
+        /* Select */
+
+        document.querySelectorAll('select').forEach(function(field) {
+
+            field.classList.add('form-select');
+
+        });
+
+
+        /* Checkbox */
+
+        document.querySelectorAll(
+            'input[type=checkbox]'
+        ).forEach(function(field) {
+
+            field.classList.add('form-check-input');
+
+        });
+
+
+        /* Radio */
+
+        document.querySelectorAll(
+            'input[type=radio]'
+        ).forEach(function(field) {
+
+            field.classList.add('form-check-input');
+
+        });
+
+
+        /* Auto dismiss messages */
+
+        setTimeout(function() {
+
+            document.querySelectorAll(
+                '.alert'
+            ).forEach(function(alert) {
+
+                const bsAlert =
+                    bootstrap.Alert.getOrCreateInstance(alert);
+
+                bsAlert.close();
+
+            });
+
+        }, 5000);
+
+    </script>
+
+</body>
+
+</html>

@@ -12,7 +12,7 @@ Booking Date: {{ selected_date }}
 Time Slots: {% for slot in slots %}{{ slot }}{% if not forloop.last %}, {% endif %}{% endfor %}
 Amount Paid: ₹{{ amount }}
 Payment Method: {{ payment_method }}
-Venue: The SK Sports Park
+Venue: {{ turf_name|default:"The SK Sports Park" }}
 Booking made on: {{ current_date }} at {{ booking_time }}
 
 IMPORTANT INFORMATION

@@ -21,7 +21,7 @@
 
         {% if razorpay_mode == 'test' %}
         <div class="alert alert-warning" role="status">
-          <strong>Razorpay TEST MODE</strong> — use Razorpay test payment details. No real payment will be taken.
+          <strong>Razorpay TEST MODE</strong> — no real bank OTP or payment will be sent. Use Razorpay test card details and enter any 4–10 digit OTP in the test checkout to complete the payment.
         </div>
         {% endif %}
 
@@ -39,6 +39,8 @@
           <dd class="col-sm-8">{{ details.username }}</dd>
           <dt class="col-sm-4">Email</dt>
           <dd class="col-sm-8">{{ details.email }}</dd>
+          <dt class="col-sm-4">Turf</dt>
+          <dd class="col-sm-8">{{ details.turf_name }}</dd>
           <dt class="col-sm-4">Date</dt>
           <dd class="col-sm-8">{{ details.selectedDate }}</dd>
           <dt class="col-sm-4">Slots</dt>

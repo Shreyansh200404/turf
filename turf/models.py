@@ -19,6 +19,14 @@ class bookslot(models.Model):
 class TurfBooked(models.Model):
     name = models.CharField(max_length=200)
     email = models.CharField(max_length=200)
+    turf = models.ForeignKey(
+        'Turf',
+        null=True,
+        blank=True,
+        on_delete=models.SET_NULL,
+        related_name='bookings',
+    )
+    turf_name = models.CharField(max_length=200, blank=True, default='')
     amount = models.IntegerField()
     selected_date = models.CharField(max_length=200)
     current_date = models.CharField(max_length=200)
@@ -34,6 +42,21 @@ class TurfBooked(models.Model):
     cancelled_at = models.DateTimeField(null=True, blank=True)
     refund_id = models.CharField(max_length=100, blank=True)
     refund_status = models.CharField(max_length=20, default="not_applicable")
+
+
+class Turf(models.Model):
+    name = models.CharField(max_length=200)
+    slot_price = models.PositiveIntegerField(default=500)
+    description = models.TextField(blank=True)
+    address = models.TextField(blank=True)
+    contact_phone = models.CharField(max_length=20, blank=True)
+    contact_email = models.EmailField(blank=True)
+    is_active = models.BooleanField(default=True)
+    is_default = models.BooleanField(default=False)
+
+    def __str__(self):
+        return self.name
+
 
 class TurfSettings(models.Model):
     name = models.CharField(max_length=200, default="The SK Sports Turf")

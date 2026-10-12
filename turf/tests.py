@@ -11,7 +11,7 @@ from django.core import mail
 from django.test import TestCase, override_settings
 from django.urls import reverse
 
-from .models import TurfBooked, TurfSettings, turfBooking
+from .models import Turf, TurfBooked, TurfSettings, turfBooking
 from .views import (
     RazorpayError,
     RefundProcessingError,
@@ -183,6 +183,7 @@ class RazorpayBookingTests(TestCase):
         self.assertEqual(response.status_code, 200)
         self.assertContains(response, 'Pay ₹1000 securely')
         self.assertContains(response, 'Razorpay TEST MODE')
+        self.assertContains(response, 'enter any 4–10 digit OTP')
         self.assertContains(response, 'order_test123')
         razorpay_request.assert_called_once()
         self.assertEqual(razorpay_request.call_args.args[:2], ('POST', 'orders'))
@@ -270,7 +271,7 @@ class RazorpayBookingTests(TestCase):
 
         self.assertRedirects(
             response,
-            f"{reverse('slot_details')}?date=2030-01-01",
+            f"{reverse('slot_details')}?date=2030-01-01&turf_id={Turf.objects.get(is_default=True).pk}",
             fetch_redirect_response=False,
         )
         response = self.client.get(response.url)
@@ -326,6 +327,8 @@ class RazorpayBookingTests(TestCase):
         self.assertEqual(booking.razorpay_order_id, 'order_test123')
         self.assertEqual(booking.amount, 500)
         self.assertEqual(booking.payment_method, 'upi')
+        self.assertTrue(booking.turf.is_default)
+        self.assertEqual(booking.turf_name, booking.turf.name)
         self.assertNotIn('pending_razorpay_booking', self.client.session)
 
     @patch('turf.views._razorpay_request')
@@ -553,3 +556,196 @@ class BookingCancellationTests(TestCase):
         booking.refresh_from_db()
         self.assertFalse(booking.cancelled)
         self.assertEqual(mail.outbox, [])
+
+
+class MultiTurfManagementTests(TestCase):
+    def setUp(self):
+        self.owner = User.objects.create_user(
+            username='turf-manager',
+            email='manager@example.com',
+            password='TestingPass!123',
+            is_staff=True,
+        )
+        self.user = User.objects.create_user(
+            username='turf-customer',
+            email='customer@example.com',
+            password='TestingPass!123',
+        )
+        self.default_turf = Turf.objects.get(is_default=True)
+        self.second_turf = Turf.objects.create(
+            name='Practice Field',
+            slot_price=900,
+            description='A second bookable field',
+            is_active=True,
+        )
+
+    def test_owner_can_create_edit_and_remove_turfs_without_losing_booking_history(self):
+        self.client.force_login(self.owner)
+        response = self.client.post(
+            reverse('owner_turf_create'),
+            {
+                'name': 'Training Ground',
+                'slot_price': '750',
+                'description': 'Training sessions',
+                'address': 'North entrance',
+                'contact_phone': '',
+                'contact_email': '',
+                'is_active': 'on',
+            },
+        )
+
+        self.assertRedirects(response, reverse('owner_turfs'))
+        turf = Turf.objects.get(name='Training Ground')
+        response = self.client.post(
+            reverse('owner_turf_edit', args=[turf.pk]),
+            {
+                'name': 'Training Ground East',
+                'slot_price': '800',
+                'description': 'Updated details',
+                'address': 'East entrance',
+                'contact_phone': '',
+                'contact_email': '',
+                'is_active': 'on',
+            },
+        )
+        self.assertRedirects(response, reverse('owner_turfs'))
+        turf.refresh_from_db()
+        self.assertEqual(turf.name, 'Training Ground East')
+        self.assertEqual(turf.slot_price, 800)
+
+        booking = TurfBooked.objects.create(
+            name='Customer',
+            email='customer@example.com',
+            turf=turf,
+            turf_name=turf.name,
+            amount=800,
+            selected_date='2030-01-01',
+            current_date='2029-12-31',
+            payment_id='pay_training',
+        )
+        response = self.client.post(reverse('owner_turf_delete', args=[turf.pk]))
+
+        self.assertRedirects(response, reverse('owner_turfs'))
+        turf.refresh_from_db()
+        booking.refresh_from_db()
+        self.assertFalse(turf.is_active)
+        self.assertEqual(booking.turf_id, turf.pk)
+        self.assertEqual(booking.turf_name, 'Training Ground East')
+
+    def test_customer_can_see_availability_independently_per_turf(self):
+        self.client.force_login(self.user)
+        TurfBooked.objects.create(
+            name='Existing customer',
+            email='existing@example.com',
+            turf=self.default_turf,
+            turf_name=self.default_turf.name,
+            amount=500,
+            selected_date='2030-01-01',
+            current_date='2029-12-31',
+            slots='["6-7 am"]',
+            payment_id='pay_default_slot',
+            paid=True,
+        )
+
+        second_response = self.client.get(
+            reverse('slot_details'),
+            {'date': '2030-01-01', 'turf_id': self.second_turf.pk},
+        )
+        default_response = self.client.get(
+            reverse('slot_details'),
+            {'date': '2030-01-01', 'turf_id': self.default_turf.pk},
+        )
+
+        self.assertEqual(second_response.status_code, 200)
+        self.assertFalse(second_response.context['time_slots'][0]['booked'])
+        self.assertEqual(second_response.context['slot_price'], 900)
+        self.assertTrue(default_response.context['time_slots'][0]['booked'])
+
+    @patch('turf.views._razorpay_request')
+    def test_checkout_uses_selected_turf_price_and_keeps_turf_in_session(self, razorpay_request):
+        self.client.force_login(self.user)
+        turfBooking.objects.create(
+            time_slot='6-7 am',
+            isBooked=True,
+            days='2030-01-01',
+        )
+        razorpay_request.return_value = {
+            'id': 'order_secondturf',
+            'amount': 90000,
+            'currency': 'INR',
+        }
+
+        response = self.client.post(
+            reverse('turfBilling'),
+            {
+                'selected_date': '2030-01-01',
+                'turf_id': str(self.second_turf.pk),
+                'slots': ['6-7 am'],
+            },
+        )
+
+        self.assertEqual(response.status_code, 200)
+        self.assertContains(response, 'Practice Field')
+        self.assertEqual(razorpay_request.call_args.args[2]['amount'], 90000)
+        self.assertEqual(
+            self.client.session['pending_razorpay_booking']['turf_id'],
+            self.second_turf.pk,
+        )
+
+    @override_settings(
+        RAZORPAY_MODE='test',
+        RAZOR_KEY_ID='rzp_test_key',
+        RAZOR_KEY_SECRET='test_secret',
+        TURF_TIME_ZONE='UTC',
+    )
+    @patch('turf.views._razorpay_request')
+    def test_payment_confirmation_saves_the_selected_turf(self, razorpay_request):
+        self.client.force_login(self.user)
+        session = self.client.session
+        session['pending_razorpay_booking'] = {
+            'order_id': 'order_secondturf',
+            'user_id': self.user.pk,
+            'turf_id': self.second_turf.pk,
+            'turf_name': self.second_turf.name,
+            'amount': 900,
+            'selected_date': '2030-01-01',
+            'current_date': '2029-12-31',
+            'booking_time': '09:00:00',
+            'slots': ['6-7 am'],
+        }
+        session.save()
+        payment_id = 'pay_secondturf'
+        signature = hmac.new(
+            b'test_secret',
+            b'order_secondturf|pay_secondturf',
+            hashlib.sha256,
+        ).hexdigest()
+        razorpay_request.return_value = {
+            'id': payment_id,
+            'order_id': 'order_secondturf',
+            'amount': 90000,
+            'currency': 'INR',
+            'status': 'captured',
+            'method': 'upi',
+        }
+
+        response = self.client.post(
+            reverse('success'),
+            {
+                'razorpay_order_id': 'order_secondturf',
+                'razorpay_payment_id': payment_id,
+                'razorpay_signature': signature,
+            },
+        )
+
+        self.assertEqual(response.status_code, 200)
+        booking = TurfBooked.objects.get(payment_id=payment_id)
+        self.assertEqual(booking.turf_id, self.second_turf.pk)
+        self.assertEqual(booking.turf_name, self.second_turf.name)
+
+    def test_non_staff_cannot_manage_turfs(self):
+        self.client.force_login(self.user)
+
+        response = self.client.get(reverse('owner_turfs'))
+
+        self.assertRedirects(response, reverse('book_now'))

@@ -1,0 +1,259 @@
+body.owner-admin-body {
+    --owner-sidebar-expanded-width: 240px;
+    --owner-sidebar-collapsed-width: 72px;
+    min-height: 100vh;
+    background: #f5f7fb;
+    color: #212529;
+    font-family: Arial, sans-serif;
+}
+
+#owner-sidebar {
+    position: fixed;
+    top: 0;
+    right: auto;
+    bottom: 0;
+    left: 0;
+    z-index: 1000;
+    width: var(--owner-sidebar-expanded-width);
+    height: 100vh;
+    min-height: 100vh;
+    margin: 0;
+    padding: 0;
+    box-sizing: border-box;
+    overflow: hidden;
+    background: #fff;
+    box-shadow: 2px 0 14px rgba(33, 37, 41, .08);
+    transition: width .2s ease, transform .2s ease;
+}
+
+#owner-sidebar .owner-sidebar-sticky {
+    height: 100%;
+    overflow-x: hidden;
+    overflow-y: auto;
+    padding: 72px 12px 24px;
+}
+
+#owner-sidebar .owner-sidebar-brand {
+    margin: 0 8px 24px;
+    padding: 0 8px 20px;
+    border-bottom: 1px solid #e9ecef;
+    color: #212529;
+    font-size: 1.15rem;
+    font-weight: 700;
+    white-space: nowrap;
+}
+
+#owner-sidebar .owner-sidebar-brand i {
+    color: #0d6efd;
+}
+
+#owner-sidebar .nav-link {
+    margin: 3px 0;
+    padding: 11px 12px;
+    border-radius: 8px;
+    color: #495057;
+    font-weight: 500;
+    transition: color .15s ease, background-color .15s ease;
+}
+
+#owner-sidebar .nav-link:hover {
+    background: #f1f4f9;
+    color: #0d6efd;
+}
+
+#owner-sidebar .nav-link.active {
+    background: #e8f0ff;
+    color: #0d6efd;
+}
+
+#owner-sidebar .nav-link i {
+    width: 20px;
+    text-align: center;
+}
+
+#owner-sidebar .owner-sidebar-logout {
+    margin-top: 32px;
+}
+
+#owner-admin-main {
+    min-width: 0;
+    width: calc(100% - var(--owner-sidebar-expanded-width));
+    margin-left: var(--owner-sidebar-expanded-width);
+    padding: 32px;
+    box-sizing: border-box;
+    transition: margin-left .2s ease;
+}
+
+.owner-sidebar-toggle {
+    position: fixed;
+    top: 16px;
+    left: 16px;
+    z-index: 1100;
+    display: inline-flex;
+    width: 40px;
+    height: 40px;
+    align-items: center;
+    justify-content: center;
+    border: 1px solid #e1e6ed;
+    border-radius: 8px;
+    background: #fff;
+    color: #343a40;
+    box-shadow: 0 2px 8px rgba(33, 37, 41, .12);
+    cursor: pointer;
+}
+
+.owner-sidebar-toggle:hover {
+    color: #0d6efd;
+}
+
+.owner-sidebar-toggle:focus-visible {
+    outline: 3px solid rgba(13, 110, 253, .35);
+    outline-offset: 2px;
+}
+
+.owner-sidebar-backdrop {
+    display: none;
+}
+
+body.owner-admin-body .container-fluid {
+    max-width: 1600px;
+}
+
+body.owner-admin-body .card {
+    overflow: hidden;
+    border: 1px solid #e9edf3;
+    border-radius: 12px;
+    background: #fff;
+    box-shadow: 0 3px 14px rgba(33, 37, 41, .06);
+}
+
+body.owner-admin-body .card-header {
+    border-bottom-color: #edf0f4;
+}
+
+body.owner-admin-body .table thead th {
+    background: #f7f8fa;
+    color: #495057;
+    font-weight: 600;
+    white-space: nowrap;
+}
+
+body.owner-admin-body.owner-sidebar-collapsed #owner-sidebar {
+    width: var(--owner-sidebar-collapsed-width);
+}
+
+body.owner-admin-body.owner-sidebar-collapsed #owner-sidebar .owner-sidebar-sticky {
+    padding-right: 8px;
+    padding-left: 8px;
+}
+
+body.owner-admin-body.owner-sidebar-collapsed #owner-sidebar .owner-sidebar-brand {
+    overflow: hidden;
+    height: 0;
+    margin: 0;
+    padding: 0;
+    border: 0;
+}
+
+body.owner-admin-body.owner-sidebar-collapsed #owner-sidebar .owner-sidebar-brand i {
+    display: none;
+}
+
+body.owner-admin-body.owner-sidebar-collapsed #owner-sidebar .nav-link {
+    overflow: hidden;
+    padding-right: 8px;
+    padding-left: 8px;
+    text-align: center;
+    white-space: nowrap;
+}
+
+body.owner-admin-body.owner-sidebar-collapsed #owner-sidebar .nav-link i {
+    margin-right: 0 !important;
+}
+
+body.owner-admin-body.owner-sidebar-collapsed #owner-sidebar .nav-link span {
+    display: none;
+}
+
+body.owner-admin-body.owner-sidebar-collapsed #owner-admin-main {
+    width: calc(100% - var(--owner-sidebar-collapsed-width));
+    margin-left: var(--owner-sidebar-collapsed-width);
+}
+
+@media (max-width: 768px) {
+    #owner-sidebar {
+        top: 0;
+        bottom: 0;
+        left: 0;
+        width: min(280px, 85vw);
+        height: 100vh;
+        transform: translateX(-100%);
+        box-shadow: 2px 0 14px rgba(33, 37, 41, .16);
+    }
+
+    #owner-sidebar .owner-sidebar-sticky {
+        padding: 72px 12px 24px;
+    }
+
+    #owner-sidebar .owner-sidebar-brand {
+        margin-bottom: 20px;
+    }
+
+    body.owner-admin-body.owner-sidebar-open #owner-sidebar {
+        transform: translateX(0);
+    }
+
+    .owner-sidebar-backdrop {
+        position: fixed;
+        inset: 0;
+        z-index: 990;
+        background: rgba(17, 24, 39, .45);
+    }
+
+    body.owner-admin-body.owner-sidebar-open .owner-sidebar-backdrop {
+        display: block;
+    }
+
+    #owner-admin-main {
+        width: 100%;
+        margin-left: 0;
+        padding: 72px 16px 20px;
+    }
+
+    body.owner-admin-body.owner-sidebar-collapsed #owner-admin-main {
+        width: 100%;
+        margin-left: 0;
+    }
+
+    body.owner-admin-body.owner-sidebar-collapsed #owner-sidebar {
+        width: min(280px, 85vw);
+    }
+
+    body.owner-admin-body.owner-sidebar-collapsed #owner-sidebar .owner-sidebar-sticky {
+        padding: 72px 12px 24px;
+    }
+
+    body.owner-admin-body.owner-sidebar-collapsed #owner-sidebar .owner-sidebar-brand {
+        height: auto;
+        margin: 0 8px 20px;
+        padding: 0 8px 20px;
+        border-bottom: 1px solid #e9ecef;
+    }
+
+    body.owner-admin-body.owner-sidebar-collapsed #owner-sidebar .owner-sidebar-brand i {
+        display: inline-block;
+    }
+
+    body.owner-admin-body.owner-sidebar-collapsed #owner-sidebar .nav-link {
+        padding: 11px 12px;
+        text-align: left;
+    }
+
+    body.owner-admin-body.owner-sidebar-collapsed #owner-sidebar .nav-link i {
+        margin-right: .5rem !important;
+    }
+
+    body.owner-admin-body.owner-sidebar-collapsed #owner-sidebar .nav-link span {
+        display: inline;
+    }
+}

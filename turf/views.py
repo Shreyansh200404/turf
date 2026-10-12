@@ -1,4 +1,4 @@
-from django.shortcuts import render, redirect, HttpResponse
+from django.shortcuts import get_object_or_404, render, redirect, HttpResponse
 from django.urls import reverse
 from django.contrib.auth.models import User, auth
 from django.contrib.auth.forms import PasswordResetForm, SetPasswordForm
@@ -34,6 +34,7 @@ from django.views.decorators.http import require_GET, require_POST
 from urllib.error import HTTPError, URLError
 from urllib.request import Request, urlopen
 from zoneinfo import ZoneInfo
+from .forms import TurfForm
 try:
     from pytz import timezone
 except ImportError:
@@ -94,6 +95,17 @@ def _razorpay_credentials():
 class BookingSlotsUnavailable(Exception):
     def __init__(self, slots):
         self.slots = slots
+
+
+def _active_turf(turf_id=None):
+    turfs = Turf.objects.filter(is_active=True)
+    if turf_id:
+        try:
+            turf_id = int(turf_id)
+        except (TypeError, ValueError):
+            return None
+        return turfs.filter(pk=turf_id).first()
+    return turfs.filter(is_default=True).first() or turfs.order_by('name', 'pk').first()
 
 
 def _current_time():
@@ -473,11 +485,11 @@ def book_now(request):
     # Initialize time slots if they don't exist
     initialize_time_slots()
     
-    turf_settings = TurfSettings.objects.first()
+    turfs = Turf.objects.filter(is_active=True).order_by('name', 'pk')
     if request.user.is_authenticated:
         username = request.user.username
-        return render(request, 'booking_index.html', {'username': username, 'turf': turf_settings})
-    return render(request, 'booking_index.html', {'turf': turf_settings})
+        return render(request, 'booking_index.html', {'username': username, 'turfs': turfs})
+    return render(request, 'booking_index.html', {'turfs': turfs})
 
 
 def turf_details(request):
@@ -486,8 +498,18 @@ def turf_details(request):
     
     currentDate = date.today().strftime("%Y-%m-%d")
     endDate = (date.today() + timedelta(days=6)).strftime("%Y-%m-%d")
-    turf_settings = TurfSettings.objects.first()
-    return render(request, 'turfblog.html', {'currentDate': currentDate, 'endDate': endDate, 'turf': turf_settings})
+    turfs = Turf.objects.filter(is_active=True).order_by('name', 'pk')
+    requested_turf = request.GET.get('turf_id')
+    turf = _active_turf(requested_turf)
+    if turf is None:
+        messages.error(request, 'No turfs are currently available for booking.')
+        return redirect('book_now')
+    return render(request, 'turfblog.html', {
+        'currentDate': currentDate,
+        'endDate': endDate,
+        'turf': turf,
+        'turfs': turfs,
+    })
 
 
 def login(request):
@@ -717,19 +739,89 @@ def owner_settings(request):
     turf_settings = TurfSettings.objects.first()
     
     if request.method == 'POST':
-        turf_settings.name = request.POST.get('name')
-        turf_settings.slot_price = request.POST.get('slot_price')
-        turf_settings.description = request.POST.get('description')
-        turf_settings.address = request.POST.get('address')
-        turf_settings.contact_phone = request.POST.get('contact_phone')
-        turf_settings.contact_email = request.POST.get('contact_email')
-        turf_settings.save()
+        try:
+            slot_price = int(request.POST.get('slot_price', ''))
+        except (TypeError, ValueError):
+            messages.error(request, 'Enter a valid positive slot price.')
+            return render(request, 'owner_settings.html', {'turf_settings': turf_settings})
+        if slot_price < 1:
+            messages.error(request, 'Enter a valid positive slot price.')
+            return render(request, 'owner_settings.html', {'turf_settings': turf_settings})
+
+        with transaction.atomic():
+            turf_settings.name = request.POST.get('name', '').strip()
+            turf_settings.slot_price = slot_price
+            turf_settings.description = request.POST.get('description', '')
+            turf_settings.address = request.POST.get('address', '')
+            turf_settings.contact_phone = request.POST.get('contact_phone', '')
+            turf_settings.contact_email = request.POST.get('contact_email', '')
+            turf_settings.save()
+
+            default_turf = Turf.objects.filter(is_default=True).first()
+            if default_turf:
+                default_turf.name = turf_settings.name
+                default_turf.slot_price = slot_price
+                default_turf.description = turf_settings.description
+                default_turf.address = turf_settings.address
+                default_turf.contact_phone = turf_settings.contact_phone
+                default_turf.contact_email = turf_settings.contact_email
+                default_turf.save()
         messages.success(request, 'Settings updated successfully!')
         return redirect('owner_settings')
     
     return render(request, 'owner_settings.html', {'turf_settings': turf_settings})
 
 @login_required(login_url='owner_login')
+@login_required(login_url='owner_login')
+def owner_turfs(request):
+    if not request.user.is_staff:
+        return redirect('book_now')
+    return render(request, 'owner_turfs.html', {
+        'turfs': Turf.objects.order_by('name', 'pk'),
+    })
+
+
+@login_required(login_url='owner_login')
+def owner_turf_create(request):
+    if not request.user.is_staff:
+        return redirect('book_now')
+    form = TurfForm(request.POST or None)
+    if request.method == 'POST' and form.is_valid():
+        form.save()
+        messages.success(request, 'Turf added successfully.')
+        return redirect('owner_turfs')
+    return render(request, 'owner_turf_form.html', {'form': form, 'title': 'Add Turf'})
+
+
+@login_required(login_url='owner_login')
+def owner_turf_edit(request, turf_id):
+    if not request.user.is_staff:
+        return redirect('book_now')
+    turf = get_object_or_404(Turf, pk=turf_id)
+    form = TurfForm(request.POST or None, instance=turf)
+    if request.method == 'POST' and form.is_valid():
+        form.save()
+        messages.success(request, 'Turf updated successfully.')
+        return redirect('owner_turfs')
+    return render(request, 'owner_turf_form.html', {
+        'form': form,
+        'title': f'Edit {turf.name}',
+        'turf': turf,
+    })
+
+
+@login_required(login_url='owner_login')
+@require_POST
+def owner_turf_delete(request, turf_id):
+    if not request.user.is_staff:
+        return redirect('book_now')
+    turf = get_object_or_404(Turf, pk=turf_id)
+    turf.is_active = False
+    turf.save(update_fields=['is_active'])
+    messages.success(request, 'Turf removed from booking. Existing booking history has been retained.')
+    return redirect('owner_turfs')
+
+
 def owner_analytics(request):
     if not request.user.is_staff:
         return redirect('book_now')
@@ -941,11 +1033,16 @@ def slot_details(request):
         currentDate = date.today().strftime("%Y-%m-%d")
         currentTime = datetime.now()  # Get current time
         selectedDate = request.POST.get('date') or request.GET.get('date', '')
+        requested_turf = request.POST.get('turf_id') or request.GET.get('turf_id')
+        turf = _active_turf(requested_turf)
+        if turf is None:
+            messages.error(request, 'Select a turf that is available for booking.')
+            return redirect('book_now')
         try:
             datetime.strptime(selectedDate, "%Y-%m-%d")
         except ValueError:
             messages.error(request, 'Select a valid booking date.')
-            return redirect('turf_details')
+            return redirect(f"{reverse('turf_details')}?turf_id={turf.pk}")
         choosenDay = datetime.strptime(selectedDate, "%Y-%m-%d").strftime("%A")
         
         # Initialize time slots if they don't exist
@@ -972,6 +1069,7 @@ def slot_details(request):
         
         # 1. Check TurfBooked model for confirmed bookings
         existing_bookings = TurfBooked.objects.filter(
+            turf=turf,
             selected_date=selectedDate,
             paid=True,
             cancelled=False,
@@ -983,28 +1081,24 @@ def slot_details(request):
                 if slot not in booked_slots:
                     booked_slots.append(slot)
                     
-                    # Update turfBooking model to reflect this booking
-                    slot_booking, created = turfBooking.objects.get_or_create(
-                        time_slot=slot,
-                        defaults={
-                            'isBooked': True,
-                            'days': selectedDate
-                        }
-                    )
-                    if not created:
-                        slot_booking.isBooked = True
-                        slot_booking.days = selectedDate
-                        slot_booking.save()
+                    if turf.is_default:
+                        slot_booking, created = turfBooking.objects.get_or_create(
+                            time_slot=slot,
+                            defaults={'isBooked': True, 'days': selectedDate},
+                        )
+                        if not created:
+                            slot_booking.isBooked = True
+                            slot_booking.days = selectedDate
+                            slot_booking.save()
         
         # 2. Also check turfBooking model for any additional booked slots
-        booked_slot_records = turfBooking.objects.filter(days=selectedDate, isBooked=True)
-        for record in booked_slot_records:
-            if record.time_slot not in booked_slots:
-                booked_slots.append(record.time_slot)
+        if turf.is_default:
+            booked_slot_records = turfBooking.objects.filter(days=selectedDate, isBooked=True)
+            for record in booked_slot_records:
+                if record.time_slot not in booked_slots:
+                    booked_slots.append(record.time_slot)
         
-        # Get turf price from settings
-        turf_settings = TurfSettings.objects.first()
-        slot_price = turf_settings.slot_price if turf_settings else 500
+        slot_price = turf.slot_price
         
         # Time slots with their start hours in 24-hour format
         time_slots = [
@@ -1075,6 +1169,8 @@ def slot_details(request):
             'selectedDate': selectedDate,
             'currentDate': currentDate,
             'slot_price': slot_price,
+            'turf': turf,
+            'turf_id': turf.pk,
         }
         
         return render(request, 'slotbooking.html', context)
@@ -1088,6 +1184,11 @@ def turfBilling(request):
         return redirect('slot_details')
 
     selected_date = request.POST.get('selected_date', '').strip()
+    requested_turf = request.POST.get('turf_id')
+    turf = _active_turf(requested_turf)
+    if turf is None:
+        messages.error(request, 'Select a turf that is available for booking.')
+        return redirect('book_now')
     slots = request.POST.getlist('slots')
     slots = list(dict.fromkeys(slot.strip() for slot in slots if slot.strip()))
 
@@ -1112,25 +1213,28 @@ def turfBilling(request):
     slots.sort(key=SLOT_IDS.get)
     already_booked = set()
     for booking in TurfBooked.objects.filter(
+        turf=turf,
         selected_date=selected_date,
         paid=True,
         cancelled=False,
     ):
         already_booked.update(_booking_slots(booking))
-    already_booked.update(
-        turfBooking.objects.filter(days=selected_date, isBooked=True)
-        .values_list('time_slot', flat=True)
-    )
+    if turf.is_default:
+        already_booked.update(
+            turfBooking.objects.filter(days=selected_date, isBooked=True)
+            .values_list('time_slot', flat=True)
+        )
     conflicts = sorted(set(slots) & already_booked)
     if conflicts:
         messages.error(
             request,
             f'These slots are no longer available: {", ".join(conflicts)}.',
         )
-        return redirect(f"{reverse('slot_details')}?date={selected_date}")
+        return redirect(
+            f"{reverse('slot_details')}?date={selected_date}&turf_id={turf.pk}"
+        )
 
-    turf_settings = TurfSettings.objects.first()
-    slot_price = turf_settings.slot_price if turf_settings else 500
+    slot_price = turf.slot_price
     if slot_price <= 0:
         messages.error(request, 'The booking price is currently invalid. Please contact the venue.')
         return redirect('book_now')
@@ -1139,6 +1243,7 @@ def turfBilling(request):
     details = {
         'username': request.user.username,
         'email': request.user.email,
+        'turf_name': turf.name,
         'selectedDate': selected_date,
         'currentDate': local_now.strftime('%Y-%m-%d'),
         'totalAmount': amount,
@@ -1156,6 +1261,7 @@ def turfBilling(request):
             'notes': {
                 'user_id': str(request.user.pk),
                 'selected_date': selected_date,
+                'turf': turf.name,
                 'slots': ', '.join(slots),
             },
         })
@@ -1180,6 +1286,8 @@ def turfBilling(request):
     request.session['pending_razorpay_booking'] = {
         'order_id': order_id,
         'user_id': request.user.pk,
+        'turf_id': turf.pk,
+        'turf_name': turf.name,
         'amount': amount,
         'selected_date': selected_date,
         'current_date': details['currentDate'],
@@ -1248,8 +1356,15 @@ def success(request):
 
     booked_slots = intent.get('slots', [])
     selected_date = intent.get('selected_date', '')
+    intent_turf_id = intent.get('turf_id')
+    turf = (
+        Turf.objects.filter(pk=intent_turf_id).first()
+        if intent_turf_id
+        else Turf.objects.filter(is_default=True).first()
+    )
     if (
-        not isinstance(booked_slots, list)
+        turf is None
+        or not isinstance(booked_slots, list)
         or not booked_slots
         or any(slot not in SLOT_IDS for slot in booked_slots)
     ):
@@ -1258,6 +1373,7 @@ def success(request):
 
     try:
         with transaction.atomic():
+            Turf.objects.select_for_update().get(pk=turf.pk)
             initialize_time_slots()
             list(
                 turfBooking.objects.filter(time_slot__in=booked_slots)
@@ -1266,6 +1382,7 @@ def success(request):
                 .values_list('id', flat=True)
             )
             existing_bookings = TurfBooked.objects.select_for_update().filter(
+                turf=turf,
                 selected_date=selected_date,
                 paid=True,
                 cancelled=False,
@@ -1273,12 +1390,13 @@ def success(request):
             occupied_slots = set()
             for existing_booking in existing_bookings:
                 occupied_slots.update(_booking_slots(existing_booking))
-            occupied_slots.update(
-                turfBooking.objects.filter(
-                    days=selected_date,
-                    isBooked=True,
-                ).values_list('time_slot', flat=True)
-            )
+            if turf.is_default:
+                occupied_slots.update(
+                    turfBooking.objects.filter(
+                        days=selected_date,
+                        isBooked=True,
+                    ).values_list('time_slot', flat=True)
+                )
             conflicts = sorted(set(booked_slots) & occupied_slots)
             if conflicts:
                 raise BookingSlotsUnavailable(conflicts)
@@ -1286,6 +1404,8 @@ def success(request):
             booking = TurfBooked.objects.create(
                 name=request.user.username,
                 email=request.user.email,
+                turf=turf,
+                turf_name=turf.name,
                 amount=intent['amount'],
                 selected_date=selected_date,
                 current_date=intent['current_date'],
@@ -1297,26 +1417,15 @@ def success(request):
                 paid=True,
                 is_dummy_payment=False,
             )
-            for slot in booked_slots:
-                slot_record, _ = turfBooking.objects.get_or_create(
-                    time_slot=slot,
-                    defaults={'isBooked': True, 'days': selected_date},
-                )
-                slot_record.isBooked = True
-                slot_record.days = selected_date
-                slot_record.save(update_fields=['isBooked', 'days'])
-
-            chosen_day = datetime.strptime(selected_date, '%Y-%m-%d').strftime('%A')
-            day_idx = {
-                'Monday': 0, 'Tuesday': 1, 'Wednesday': 2,
-                'Thursday': 3, 'Friday': 4, 'Saturday': 5, 'Sunday': 6,
-            }[chosen_day]
-            matrix, _ = bookslot.objects.get_or_create(id=1)
-            matrix_week = json.loads(matrix.week)
-            for slot in booked_slots:
-                matrix_week[day_idx][SLOT_IDS[slot]] = 1
-            matrix.week = json.dumps(matrix_week)
-            matrix.save(update_fields=['week'])
+            if turf.is_default:
+                for slot in booked_slots:
+                    slot_record, _ = turfBooking.objects.get_or_create(
+                        time_slot=slot,
+                        defaults={'isBooked': True, 'days': selected_date},
+                    )
+                    slot_record.isBooked = True
+                    slot_record.days = selected_date
+                    slot_record.save(update_fields=['isBooked', 'days'])
     except BookingSlotsUnavailable as exc:
         try:
             refund_id, refund_status = _request_razorpay_refund(
@@ -1335,6 +1444,8 @@ def success(request):
         cancelled_booking = TurfBooked.objects.create(
             name=request.user.username,
             email=request.user.email,
+            turf=turf,
+            turf_name=turf.name,
             amount=intent['amount'],
             selected_date=selected_date,
             current_date=intent['current_date'],
@@ -1414,6 +1525,7 @@ def success(request):
         try:
             email_context = {
                 'name': booking.name,
+                'turf_name': booking.turf_name,
                 'amount': booking.amount,
                 'payment_method': booking.payment_method,
                 'selected_date': booking.selected_date,
@@ -1535,34 +1647,34 @@ def delete_booking(request, id):
                 was_paid = booking.paid
                 is_dummy_payment = booking.is_dummy_payment
 
-            bookedSlots = [SLOT_IDS[slot] for slot in slots if slot in SLOT_IDS]
+            if booking.turf_id and booking.turf.is_default:
+                bookedSlots = [SLOT_IDS[slot] for slot in slots if slot in SLOT_IDS]
+                try:
+                    chosen_day = datetime.strptime(booking_date, '%Y-%m-%d').strftime('%A')
+                    day_idx = {
+                        'Monday': 0, 'Tuesday': 1, 'Wednesday': 2,
+                        'Thursday': 3, 'Friday': 4, 'Saturday': 5, 'Sunday': 6,
+                    }[chosen_day]
+                    matrix = bookslot.objects.get(id='1')
+                    matrix_week = json.loads(matrix.week)
+                    for slot_id in bookedSlots:
+                        if 1 <= slot_id <= 19:
+                            matrix_week[day_idx][slot_id] = 0
+                    matrix.week = json.dumps(matrix_week)
+                    matrix.save(update_fields=['week'])
+                except (bookslot.DoesNotExist, ValueError, KeyError, IndexError, TypeError):
+                    logger.exception('Could not update the booking matrix for booking %s', booking_id)
 
-            try:
-                chosen_day = datetime.strptime(booking_date, '%Y-%m-%d').strftime('%A')
-                day_idx = {
-                    'Monday': 0, 'Tuesday': 1, 'Wednesday': 2,
-                    'Thursday': 3, 'Friday': 4, 'Saturday': 5, 'Sunday': 6,
-                }[chosen_day]
-                matrix = bookslot.objects.get(id='1')
-                matrix_week = json.loads(matrix.week)
-                for slot_id in bookedSlots:
-                    if 1 <= slot_id <= 19:
-                        matrix_week[day_idx][slot_id] = 0
-                matrix.week = json.dumps(matrix_week)
-                matrix.save(update_fields=['week'])
-            except (bookslot.DoesNotExist, ValueError, KeyError, IndexError, TypeError):
-                logger.exception('Could not update the booking matrix for booking %s', booking_id)
-
-            for slot_time in slots:
-                slot_obj = turfBooking.objects.filter(
-                    time_slot=slot_time,
-                    days=booking_date,
-                    isBooked=True,
-                ).first()
-                if slot_obj:
-                    slot_obj.isBooked = False
-                    slot_obj.days = ''
-                    slot_obj.save(update_fields=['isBooked', 'days'])
+                for slot_time in slots:
+                    slot_obj = turfBooking.objects.filter(
+                        time_slot=slot_time,
+                        days=booking_date,
+                        isBooked=True,
+                    ).first()
+                    if slot_obj:
+                        slot_obj.isBooked = False
+                        slot_obj.days = ''
+                        slot_obj.save(update_fields=['isBooked', 'days'])
 
             if request.user.is_staff:
                 booking.delete()
@@ -1692,9 +1804,15 @@ def check_slot_status(request):
     
     if not selected_date:
         return JsonResponse({'error': 'Date parameter is required'}, status=400)
-    
+
+    turf_id = request.GET.get('turf_id')
+    turf = _active_turf(turf_id)
+    if turf is None:
+        return JsonResponse({'error': 'A valid turf_id parameter is required'}, status=400)
+
     # Get all confirmed (paid) bookings for the selected date
     existing_bookings = TurfBooked.objects.filter(
+        turf=turf,
         selected_date=selected_date,
         paid=True,
         cancelled=False,
@@ -1715,15 +1833,15 @@ def check_slot_status(request):
             if slot not in booked_slots:
                 booked_slots.append(slot)
     
-    # Also check turfBooking model for any additional booked slots
-    # Only consider slots that are marked as both booked and belong to the selected date
-    booked_slot_records = turfBooking.objects.filter(days=selected_date, isBooked=True)
-    for record in booked_slot_records:
-        if record.time_slot not in booked_slots:
-            booked_slots.append(record.time_slot)
-    
+    if turf.is_default:
+        booked_slot_records = turfBooking.objects.filter(days=selected_date, isBooked=True)
+        for record in booked_slot_records:
+            if record.time_slot not in booked_slots:
+                booked_slots.append(record.time_slot)
+
     return JsonResponse({
         'date': selected_date,
+        'turf_id': turf.pk,
         'booked_slots': booked_slots
     })
 

@@ -1,229 +1,1008 @@
+{% load static %}
 <!DOCTYPE html>
 <html lang="en">
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
+
     <title>The SK Sports Turf - Owner Dashboard</title>
-    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0-alpha1/dist/css/bootstrap.min.css" rel="stylesheet">
-    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css">
-    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0-alpha1/dist/css/bootstrap.min.css"
+          rel="stylesheet">
+
+    <link rel="stylesheet"
+          href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css">
+
+    <link rel="stylesheet" href="{% static 'css/owner_admin.css' %}">
+
     <style>
-        .sidebar {
-            min-height: 100vh;
-            position: fixed;
-            top: 0;
-            left: 0;
-            z-index: 100;
-            padding: 48px 0 0;
-            box-shadow: inset -1px 0 0 rgba(0, 0, 0, .1);
-            background-color: #f8f9fa;
+
+        /* =========================================
+           DASHBOARD MAIN CONTENT ONLY
+        ========================================= */
+
+        .dashboard-wrapper {
+            padding: 8px 5px 40px;
         }
-        .sidebar-sticky {
-            height: calc(100vh - 48px);
-            overflow-x: hidden;
-            overflow-y: auto;
-        }
-        .nav-link {
-            font-weight: 500;
-            color: #333;
-        }
-        .nav-link.active {
-            color: #007bff;
-        }
-        .main-content {
-            margin-left: 240px;
-            padding: 2rem;
-        }
-        .dashboard-card {
-            border-radius: 10px;
-            box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
-            transition: transform 0.3s;
-        }
-        .dashboard-card:hover {
-            transform: translateY(-5px);
-        }
-        .dashboard-icon {
-            font-size: 2rem;
+
+        /* -----------------------------------------
+           PAGE HEADER
+        ----------------------------------------- */
+
+        .dashboard-header {
+            position: relative;
+            overflow: hidden;
+            border-radius: 22px;
+            padding: 28px 30px;
+            margin-bottom: 28px;
+
+            background: linear-gradient(
+                135deg,
+                #0d6efd,
+                #084298
+            );
+
             color: #fff;
+
+            box-shadow:
+                0 12px 30px rgba(13, 110, 253, 0.20);
         }
-        @media (max-width: 768px) {
-            .sidebar {
-                position: static;
-                height: auto;
-            }
-            .main-content {
-                margin-left: 0;
-            }
+
+        .dashboard-header::before {
+            content: "";
+            position: absolute;
+            width: 190px;
+            height: 190px;
+            border-radius: 50%;
+            background: rgba(255,255,255,0.08);
+            right: -50px;
+            top: -80px;
         }
+
+        .dashboard-header::after {
+            content: "";
+            position: absolute;
+            width: 100px;
+            height: 100px;
+            border-radius: 50%;
+            background: rgba(255,255,255,0.06);
+            right: 130px;
+            bottom: -55px;
+        }
+
+        .dashboard-header-content {
+            position: relative;
+            z-index: 2;
+        }
+
+        .dashboard-header-icon {
+            width: 54px;
+            height: 54px;
+            border-radius: 15px;
+            background: rgba(255,255,255,0.16);
+
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+
+            font-size: 23px;
+            margin-right: 15px;
+        }
+
+        .dashboard-header h1 {
+            font-size: 28px;
+            font-weight: 700;
+            margin: 0;
+        }
+
+        .dashboard-header p {
+            margin: 5px 0 0;
+            font-size: 14px;
+            opacity: 0.85;
+        }
+
+
+        /* -----------------------------------------
+           INCOME CARDS
+        ----------------------------------------- */
+
+        .income-card {
+            position: relative;
+            overflow: hidden;
+
+            border: 0;
+            border-radius: 20px;
+
+            min-height: 155px;
+
+            color: #fff;
+
+            box-shadow:
+                0 8px 24px rgba(0,0,0,0.10);
+
+            transition:
+                transform 0.25s ease,
+                box-shadow 0.25s ease;
+        }
+
+        .income-card:hover {
+            transform: translateY(-5px);
+
+            box-shadow:
+                0 15px 32px rgba(0,0,0,0.15);
+        }
+
+        .income-card::before {
+            content: "";
+            position: absolute;
+
+            width: 130px;
+            height: 130px;
+
+            border-radius: 50%;
+
+            background: rgba(255,255,255,0.10);
+
+            right: -35px;
+            top: -40px;
+        }
+
+        .income-card::after {
+            content: "";
+            position: absolute;
+
+            width: 70px;
+            height: 70px;
+
+            border-radius: 50%;
+
+            background: rgba(255,255,255,0.06);
+
+            left: -20px;
+            bottom: -25px;
+        }
+
+        .income-card .card-body {
+            position: relative;
+            z-index: 2;
+            padding: 23px;
+        }
+
+        .income-card-blue {
+            background:
+                linear-gradient(135deg, #0dcaf0, #087990);
+        }
+
+        .income-card-green {
+            background:
+                linear-gradient(135deg, #20c997, #087f5b);
+        }
+
+        .income-card-orange {
+            background:
+                linear-gradient(135deg, #ffc107, #e67700);
+        }
+
+        .income-card-red {
+            background:
+                linear-gradient(135deg, #ff6b6b, #c92a2a);
+        }
+
+        .income-label {
+            font-size: 13px;
+            font-weight: 600;
+            opacity: 0.9;
+            margin-bottom: 8px;
+        }
+
+        .income-amount {
+            font-size: 27px;
+            font-weight: 750;
+            letter-spacing: 0.3px;
+            margin-bottom: 7px;
+        }
+
+        .income-bookings {
+            font-size: 12px;
+            opacity: 0.85;
+        }
+
+        .income-icon {
+            width: 48px;
+            height: 48px;
+
+            border-radius: 14px;
+
+            display: flex;
+            align-items: center;
+            justify-content: center;
+
+            background: rgba(255,255,255,0.17);
+
+            font-size: 19px;
+        }
+
+
+        /* -----------------------------------------
+           SECTION TITLE
+        ----------------------------------------- */
+
+        .section-title-wrapper {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+
+            margin: 30px 2px 15px;
+        }
+
+        .section-title {
+            display: flex;
+            align-items: center;
+            gap: 11px;
+        }
+
+        .section-title-icon {
+            width: 40px;
+            height: 40px;
+
+            border-radius: 11px;
+
+            display: flex;
+            align-items: center;
+            justify-content: center;
+
+            background: #e9f2ff;
+            color: #0d6efd;
+        }
+
+        .section-title h5 {
+            margin: 0;
+            font-weight: 700;
+            color: #212529;
+        }
+
+        .section-title p {
+            margin: 2px 0 0;
+            font-size: 12px;
+            color: #8a94a6;
+        }
+
+
+        /* -----------------------------------------
+           RECENT BOOKINGS CARD
+        ----------------------------------------- */
+
+        .recent-bookings-card {
+            border: 0;
+            border-radius: 20px;
+
+            background: #fff;
+
+            overflow: hidden;
+
+            box-shadow:
+                0 8px 25px rgba(0,0,0,0.07);
+        }
+
+        .recent-bookings-header {
+            padding: 20px 23px;
+
+            border-bottom:
+                1px solid #f0f2f5;
+
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+
+            gap: 15px;
+        }
+
+        .recent-bookings-title {
+            display: flex;
+            align-items: center;
+            gap: 12px;
+        }
+
+        .booking-header-icon {
+            width: 42px;
+            height: 42px;
+
+            border-radius: 12px;
+
+            display: flex;
+            align-items: center;
+            justify-content: center;
+
+            background: #eef7f1;
+            color: #198754;
+        }
+
+        .recent-bookings-title h5 {
+            margin: 0;
+            font-size: 16px;
+            font-weight: 700;
+        }
+
+        .recent-bookings-title p {
+            margin: 2px 0 0;
+            color: #8a94a6;
+            font-size: 12px;
+        }
+
+
+        /* -----------------------------------------
+           TABLE
+        ----------------------------------------- */
+
+        .dashboard-table {
+            margin: 0;
+        }
+
+        .dashboard-table thead th {
+            background: #f8f9fb;
+
+            color: #6c757d;
+
+            font-size: 11px;
+            font-weight: 700;
+
+            text-transform: uppercase;
+            letter-spacing: 0.4px;
+
+            padding: 15px 18px;
+
+            white-space: nowrap;
+
+            border-bottom:
+                1px solid #e9ecef;
+        }
+
+        .dashboard-table tbody td {
+            padding: 16px 18px;
+
+            font-size: 13px;
+
+            color: #343a40;
+
+            vertical-align: middle;
+
+            border-bottom:
+                1px solid #f1f3f5;
+        }
+
+        .dashboard-table tbody tr {
+            transition: background 0.2s ease;
+        }
+
+        .dashboard-table tbody tr:hover {
+            background: #f8fbff;
+        }
+
+        .turf-name {
+            font-weight: 700;
+            color: #212529;
+        }
+
+        .customer-name {
+            font-weight: 600;
+        }
+
+        .customer-email {
+            color: #6c757d;
+            font-size: 12px;
+        }
+
+        .booking-date {
+            font-weight: 600;
+            white-space: nowrap;
+        }
+
+        .time-slot {
+            display: inline-block;
+
+            padding: 6px 10px;
+
+            border-radius: 8px;
+
+            background: #f1f5f9;
+
+            color: #475569;
+
+            font-size: 12px;
+            font-weight: 600;
+
+            white-space: nowrap;
+        }
+
+        .booking-amount {
+            color: #198754;
+            font-weight: 700;
+            white-space: nowrap;
+        }
+
+
+        /* -----------------------------------------
+           VIEW ALL BUTTON
+        ----------------------------------------- */
+
+        .booking-footer {
+            padding: 18px 23px;
+
+            border-top:
+                1px solid #f0f2f5;
+
+            display: flex;
+            justify-content: flex-end;
+        }
+
+        .view-bookings-btn {
+            border-radius: 11px;
+
+            padding: 10px 17px;
+
+            font-size: 13px;
+            font-weight: 600;
+
+            box-shadow:
+                0 5px 13px rgba(13,110,253,0.16);
+
+            transition: all 0.2s ease;
+        }
+
+        .view-bookings-btn:hover {
+            transform: translateY(-2px);
+
+            box-shadow:
+                0 8px 18px rgba(13,110,253,0.22);
+        }
+
+
+        /* -----------------------------------------
+           EMPTY STATE
+        ----------------------------------------- */
+
+        .empty-bookings {
+            padding: 50px 20px !important;
+
+            text-align: center;
+
+            color: #8a94a6;
+        }
+
+        .empty-bookings i {
+            font-size: 35px;
+
+            margin-bottom: 12px;
+
+            opacity: 0.45;
+
+            display: block;
+        }
+
+
+        /* -----------------------------------------
+           RESPONSIVE
+        ----------------------------------------- */
+
+        @media (max-width: 991px) {
+
+            .income-card {
+                margin-bottom: 5px;
+            }
+
+        }
+
+        @media (max-width: 767px) {
+
+            .dashboard-wrapper {
+                padding: 5px 0 30px;
+            }
+
+            .dashboard-header {
+                padding: 22px;
+
+                border-radius: 17px;
+            }
+
+            .dashboard-header h1 {
+                font-size: 22px;
+            }
+
+            .dashboard-header-icon {
+                width: 45px;
+                height: 45px;
+                font-size: 19px;
+            }
+
+            .income-card {
+                border-radius: 16px;
+            }
+
+            .income-amount {
+                font-size: 24px;
+            }
+
+            .recent-bookings-card {
+                border-radius: 16px;
+            }
+
+            .recent-bookings-header {
+                padding: 18px;
+            }
+
+            .booking-footer {
+                padding: 15px 18px;
+            }
+
+        }
+
     </style>
 </head>
-<body>
-    <!-- Sidebar -->
-    <nav class="col-md-3 col-lg-2 d-md-block sidebar collapse">
-        <div class="position-sticky sidebar-sticky">
-            <h3 class="text-center my-4">SK Sports Turf</h3>
-            <ul class="nav flex-column">
-                <li class="nav-item">
-                    <a class="nav-link active" href="{% url 'owner_dashboard' %}">
-                        <i class="fas fa-tachometer-alt me-2"></i>
-                        Dashboard
-                    </a>
-                </li>
-                <li class="nav-item">
-                    <a class="nav-link" href="{% url 'owner_bookings' %}">
-                        <i class="fas fa-calendar-alt me-2"></i>
-                        Bookings
-                    </a>
-                </li>
-                <li class="nav-item">
-                    <a class="nav-link" href="{% url 'owner_payments' %}">
-                        <i class="fas fa-money-bill-wave me-2"></i>
-                        Payments
-                    </a>
-                </li>
-               <li class="nav-item">
-                    <a class="nav-link" href="{% url 'owner_analytics' %}">
-                        <i class="fas fa-chart-line me-2"></i>
-                        Analytics
-                    </a>
-                </li>
-                <li class="nav-item">
-                    <a class="nav-link" href="{% url 'owner_settings' %}">
-                        <i class="fas fa-cog me-2"></i>
-                        Settings
-                    </a>
-                </li>
-                <li class="nav-item mt-5">
-                    <a class="nav-link" href="{% url 'logout' %}">
-                        <i class="fas fa-sign-out-alt me-2"></i>
-                        Logout
-                    </a>
-                </li>
-            </ul>
-        </div>
-    </nav>
 
-    <!-- Main Content -->
-    <main class="main-content">
-        <div class="container-fluid">
-            <div class="d-flex justify-content-between flex-wrap flex-md-nowrap align-items-center pt-3 pb-2 mb-3 border-bottom">
-                <h1 class="h2">Dashboard</h1>
+
+<body class="owner-admin-body">
+
+    <!-- SIDEBAR - KEEPING EXACTLY AS IT IS -->
+    {% include 'owner_sidebar.html' %}
+
+
+    <!-- =========================================
+         MAIN CONTENT
+    ========================================== -->
+
+    <main id="owner-admin-main" class="main-content">
+
+        <div class="container-fluid dashboard-wrapper">
+
+
+            <!-- =========================================
+                 DASHBOARD HEADER
+            ========================================== -->
+
+            <div class="dashboard-header">
+
+                <div class="dashboard-header-content">
+
+                    <div class="d-flex align-items-center">
+
+                        <div class="dashboard-header-icon">
+                            <i class="fas fa-chart-pie"></i>
+                        </div>
+
+                        <div>
+
+                            <h1>Owner Dashboard</h1>
+
+                            <p>
+                                Track your turf bookings and income
+                                at a glance.
+                            </p>
+
+                        </div>
+
+                    </div>
+
+                </div>
+
             </div>
 
-            <!-- Income Overview -->
-            <div class="row mb-4">
-                <div class="col-md-3">
-                    <div class="card dashboard-card bg-info text-white">
+
+            <!-- =========================================
+                 INCOME OVERVIEW
+            ========================================== -->
+
+            <div class="row g-4">
+
+
+                <!-- TODAY -->
+
+                <div class="col-xl-3 col-md-6">
+
+                    <div class="card income-card income-card-blue">
+
                         <div class="card-body">
-                            <div class="d-flex justify-content-between align-items-center">
+
+                            <div class="d-flex justify-content-between align-items-start">
+
                                 <div>
-                                    <h6 class="card-title">Today's Income</h6>
-                                    <h3 class="mb-0">₹{{ daily_income }}</h3>
-                                    <small>{{ daily_count }} bookings</small>
+
+                                    <div class="income-label">
+                                        Today's Income
+                                    </div>
+
+                                    <div class="income-amount">
+                                        ₹{{ daily_income }}
+                                    </div>
+
+                                    <div class="income-bookings">
+                                        <i class="fas fa-ticket me-1"></i>
+                                        {{ daily_count }} bookings
+                                    </div>
+
                                 </div>
-                                <div class="dashboard-icon">
+
+                                <div class="income-icon">
+
                                     <i class="fas fa-calendar-day"></i>
+
                                 </div>
+
                             </div>
+
                         </div>
+
                     </div>
+
                 </div>
-                <div class="col-md-3">
-                    <div class="card dashboard-card bg-success text-white">
+
+
+                <!-- WEEKLY -->
+
+                <div class="col-xl-3 col-md-6">
+
+                    <div class="card income-card income-card-green">
+
                         <div class="card-body">
-                            <div class="d-flex justify-content-between align-items-center">
+
+                            <div class="d-flex justify-content-between align-items-start">
+
                                 <div>
-                                    <h6 class="card-title">Weekly Income</h6>
-                                    <h3 class="mb-0">₹{{ weekly_income }}</h3>
-                                    <small>{{ weekly_count }} bookings</small>
+
+                                    <div class="income-label">
+                                        Weekly Income
+                                    </div>
+
+                                    <div class="income-amount">
+                                        ₹{{ weekly_income }}
+                                    </div>
+
+                                    <div class="income-bookings">
+                                        <i class="fas fa-ticket me-1"></i>
+                                        {{ weekly_count }} bookings
+                                    </div>
+
                                 </div>
-                                <div class="dashboard-icon">
+
+                                <div class="income-icon">
+
                                     <i class="fas fa-calendar-week"></i>
+
                                 </div>
+
                             </div>
+
                         </div>
+
                     </div>
+
                 </div>
-                <div class="col-md-3">
-                    <div class="card dashboard-card bg-warning text-white">
+
+
+                <!-- MONTHLY -->
+
+                <div class="col-xl-3 col-md-6">
+
+                    <div class="card income-card income-card-orange">
+
                         <div class="card-body">
-                            <div class="d-flex justify-content-between align-items-center">
+
+                            <div class="d-flex justify-content-between align-items-start">
+
                                 <div>
-                                    <h6 class="card-title">Monthly Income</h6>
-                                    <h3 class="mb-0">₹{{ monthly_income }}</h3>
-                                    <small>{{ monthly_count }} bookings</small>
+
+                                    <div class="income-label">
+                                        Monthly Income
+                                    </div>
+
+                                    <div class="income-amount">
+                                        ₹{{ monthly_income }}
+                                    </div>
+
+                                    <div class="income-bookings">
+                                        <i class="fas fa-ticket me-1"></i>
+                                        {{ monthly_count }} bookings
+                                    </div>
+
                                 </div>
-                                <div class="dashboard-icon">
+
+                                <div class="income-icon">
+
                                     <i class="fas fa-calendar-alt"></i>
+
                                 </div>
+
                             </div>
+
                         </div>
+
                     </div>
+
                 </div>
-                <div class="col-md-3">
-                    <div class="card dashboard-card bg-danger text-white">
+
+
+                <!-- YEARLY -->
+
+                <div class="col-xl-3 col-md-6">
+
+                    <div class="card income-card income-card-red">
+
                         <div class="card-body">
-                            <div class="d-flex justify-content-between align-items-center">
+
+                            <div class="d-flex justify-content-between align-items-start">
+
                                 <div>
-                                    <h6 class="card-title">Yearly Income</h6>
-                                    <h3 class="mb-0">₹{{ yearly_income }}</h3>
-                                    <small>{{ yearly_count }} bookings</small>
+
+                                    <div class="income-label">
+                                        Yearly Income
+                                    </div>
+
+                                    <div class="income-amount">
+                                        ₹{{ yearly_income }}
+                                    </div>
+
+                                    <div class="income-bookings">
+                                        <i class="fas fa-ticket me-1"></i>
+                                        {{ yearly_count }} bookings
+                                    </div>
+
                                 </div>
-                                <div class="dashboard-icon">
+
+                                <div class="income-icon">
+
                                     <i class="fas fa-calendar"></i>
+
                                 </div>
+
                             </div>
+
                         </div>
+
                     </div>
+
                 </div>
+
             </div>
 
-            <!-- Recent Bookings -->
-            <div class="row mb-4">
-                <div class="col-md-12">
-                    <div class="card dashboard-card">
-                        <div class="card-header bg-white">
-                            <h5 class="card-title mb-0">Recent Bookings</h5>
-                        </div>
-                        <div class="card-body">
-                            <div class="table-responsive">
-                                <table class="table table-hover">
-                                    <thead>
-                                        <tr>
-                                            <th>Name</th>
-                                            <th>Email</th>
-                                            <th>Date</th>
-                                            <th>Time Slots</th>
-                                            <th>Amount</th>
-                                        </tr>
-                                    </thead>
-                                    <tbody>
-                                        {% for booking in recent_bookings %}
-                                        <tr>
-                                            <td>{{ booking.name }}</td>
-                                            <td>{{ booking.email }}</td>
-                                            <td>{{ booking.selected_date }}</td>
-                                            <td>{{ booking.booking_time }}</td>
-                                            <td>₹{{ booking.amount }}</td>
-                                        </tr>
-                                        {% empty %}
-                                        <tr>
-                                            <td colspan="5" class="text-center">No recent bookings found</td>
-                                        </tr>
-                                        {% endfor %}
-                                    </tbody>
-                                </table>
-                            </div>
-                            <div class="text-end">
-                                <a href="{% url 'owner_bookings' %}" class="btn btn-primary">View All Bookings</a>
-                            </div>
-                        </div>
+
+            <!-- =========================================
+                 RECENT BOOKINGS SECTION TITLE
+            ========================================== -->
+
+            <div class="section-title-wrapper">
+
+                <div class="section-title">
+
+                    <div class="section-title-icon">
+
+                        <i class="fas fa-clock-rotate-left"></i>
+
                     </div>
+
+                    <div>
+
+                        <h5>Recent Bookings</h5>
+
+                        <p>
+                            Latest turf reservations
+                        </p>
+
+                    </div>
+
                 </div>
+
             </div>
+
+
+            <!-- =========================================
+                 RECENT BOOKINGS
+            ========================================== -->
+
+            <div class="recent-bookings-card mb-4">
+
+
+                <!-- Card Header -->
+
+                <div class="recent-bookings-header">
+
+                    <div class="recent-bookings-title">
+
+                        <div class="booking-header-icon">
+
+                            <i class="fas fa-calendar-check"></i>
+
+                        </div>
+
+                        <div>
+
+                            <h5>
+                                Recent Bookings
+                            </h5>
+
+                            <p>
+                                Overview of your latest bookings
+                            </p>
+
+                        </div>
+
+                    </div>
+
+                </div>
+
+
+                <!-- Table -->
+
+                <div class="table-responsive">
+
+                    <table class="table dashboard-table">
+
+                        <thead>
+
+                            <tr>
+
+                                <th>
+                                    Turf
+                                </th>
+
+                                <th>
+                                    Customer
+                                </th>
+
+                                <th>
+                                    Email
+                                </th>
+
+                                <th>
+                                    Date
+                                </th>
+
+                                <th>
+                                    Time Slot
+                                </th>
+
+                                <th>
+                                    Amount
+                                </th>
+
+                            </tr>
+
+                        </thead>
+
+
+                        <tbody>
+
+                            {% for booking in recent_bookings %}
+
+                            <tr>
+
+                                <td>
+
+                                    <span class="turf-name">
+
+                                        <i class="fas fa-futbol text-primary me-1"></i>
+
+                                        {{ booking.turf_name }}
+
+                                    </span>
+
+                                </td>
+
+
+                                <td>
+
+                                    <span class="customer-name">
+
+                                        {{ booking.name }}
+
+                                    </span>
+
+                                </td>
+
+
+                                <td>
+
+                                    <span class="customer-email">
+
+                                        {{ booking.email }}
+
+                                    </span>
+
+                                </td>
+
+
+                                <td>
+
+                                    <span class="booking-date">
+
+                                        <i class="far fa-calendar me-1 text-muted"></i>
+
+                                        {{ booking.selected_date }}
+
+                                    </span>
+
+                                </td>
+
+
+                                <td>
+
+                                    <span class="time-slot">
+
+                                        <i class="far fa-clock me-1"></i>
+
+                                        {{ booking.booking_time }}
+
+                                    </span>
+
+                                </td>
+
+
+                                <td>
+
+                                    <span class="booking-amount">
+
+                                        ₹{{ booking.amount }}
+
+                                    </span>
+
+                                </td>
+
+                            </tr>
+
+
+                            {% empty %}
+
+                            <tr>
+
+                                <td colspan="6"
+                                    class="empty-bookings">
+
+                                    <i class="fas fa-calendar-xmark"></i>
+
+                                    <div class="fw-semibold mb-1">
+                                        No recent bookings
+                                    </div>
+
+                                    <small>
+                                        New bookings will appear here.
+                                    </small>
+
+                                </td>
+
+                            </tr>
+
+                            {% endfor %}
+
+                        </tbody>
+
+                    </table>
+
+                </div>
+
+
+                <!-- Footer -->
+
+                <div class="booking-footer">
+
+                    <a href="{% url 'owner_bookings' %}"
+                       class="btn btn-primary view-bookings-btn">
+
+                        View All Bookings
+
+                        <i class="fas fa-arrow-right ms-2"></i>
+
+                    </a>
+
+                </div>
+
+            </div>
+
+
         </div>
+
     </main>
 
-    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0-alpha1/dist/js/bootstrap.bundle.min.js"></script>
+
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0-alpha1/dist/js/bootstrap.bundle.min.js">
+    </script>
+
 </body>
-</html> 
+</html>

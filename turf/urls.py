@@ -36,6 +36,10 @@ urlpatterns = [
     path('owner/bookings/', views.owner_bookings, name='owner_bookings'),
     path('owner/payments/', views.owner_payments, name='owner_payments'),
     path('owner/settings/', views.owner_settings, name='owner_settings'),
+    path('owner/turfs/', views.owner_turfs, name='owner_turfs'),
+    path('owner/turfs/add/', views.owner_turf_create, name='owner_turf_create'),
+    path('owner/turfs/<int:turf_id>/edit/', views.owner_turf_edit, name='owner_turf_edit'),
+    path('owner/turfs/<int:turf_id>/delete/', views.owner_turf_delete, name='owner_turf_delete'),
     path('owner/analytics/', views.owner_analytics, name='owner_analytics'),
 
     # Password reset by email OTP
