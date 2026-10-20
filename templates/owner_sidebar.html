@@ -419,6 +419,17 @@
 
             </li>
 
+            <li class="nav-item">
+                <a
+                    class="nav-link {% if request.resolver_match.url_name == 'owner_feedback' %}active{% endif %}"
+                    href="{% url 'owner_feedback' %}"
+                    title="Feedback"
+                >
+                    <i class="fas fa-comment-dots me-2"></i>
+                    <span>Feedback</span>
+                </a>
+            </li>
+
 
             <!-- Manage Turfs -->
 

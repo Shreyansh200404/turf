@@ -20,7 +20,7 @@ import secrets
 import time
 import uuid
 from django.db import DatabaseError, transaction
-from django.db.models import Q, Sum, Count
+from django.db.models import F, Q, Sum, Count
 
 from django.template.loader import render_to_string
 from django.conf import settings
@@ -34,7 +34,7 @@ from django.views.decorators.http import require_GET, require_POST
 from urllib.error import HTTPError, URLError
 from urllib.request import Request, urlopen
 from zoneinfo import ZoneInfo
-from .forms import TurfForm
+from .forms import FeedbackAdminForm, FeedbackForm, TurfForm
 try:
     from pytz import timezone
 except ImportError:
@@ -147,6 +147,133 @@ def _booking_start_datetime(booking):
         start,
         ZoneInfo(getattr(settings, 'TURF_TIME_ZONE', settings.TIME_ZONE)),
     )
+
+
+def _slot_start_datetime(selected_date, slot):
+    booking_date = date.fromisoformat(selected_date)
+    slot_hour = SLOT_START_HOURS[slot]
+    if slot == '12-1 am':
+        booking_date += timedelta(days=1)
+    return django_timezone.make_aware(
+        datetime.combine(booking_date, day_time(hour=slot_hour)),
+        ZoneInfo(getattr(settings, 'TURF_TIME_ZONE', settings.TIME_ZONE)),
+    )
+
+
+def _update_default_turf_slot_records(turf, selected_date, old_slots, new_slots):
+    if not turf.is_default:
+        return
+
+    removed_slots = set(old_slots) - set(new_slots)
+    added_slots = set(new_slots) - set(old_slots)
+    try:
+        chosen_day = datetime.strptime(selected_date, '%Y-%m-%d').strftime('%A')
+        day_idx = {
+            'Monday': 0, 'Tuesday': 1, 'Wednesday': 2,
+            'Thursday': 3, 'Friday': 4, 'Saturday': 5, 'Sunday': 6,
+        }[chosen_day]
+        matrix, _ = bookslot.objects.select_for_update().get_or_create(
+            pk=1,
+            defaults={'week': json.dumps([[0] * 20 for _ in range(7)])},
+        )
+        matrix_week = json.loads(matrix.week)
+        for slot in removed_slots:
+            matrix_week[day_idx][SLOT_IDS[slot]] = 0
+        for slot in added_slots:
+            matrix_week[day_idx][SLOT_IDS[slot]] = 1
+        matrix.week = json.dumps(matrix_week)
+        matrix.save(update_fields=['week'])
+    except (bookslot.DoesNotExist, ValueError, KeyError, IndexError, TypeError):
+        logger.exception('Could not update the booking matrix for %s', selected_date)
+
+    for slot in removed_slots:
+        turfBooking.objects.filter(
+            time_slot=slot,
+            days=selected_date,
+            isBooked=True,
+        ).update(isBooked=False, days='')
+    for slot in added_slots:
+        record, _ = turfBooking.objects.get_or_create(
+            time_slot=slot,
+            defaults={'isBooked': True, 'days': selected_date},
+        )
+        record.isBooked = True
+        record.days = selected_date
+        record.save(update_fields=['isBooked', 'days'])
+
+
+def _booking_slot_conflicts(turf, selected_date, slots, exclude_booking_id, existing_slots):
+    bookings = TurfBooked.objects.filter(
+        turf=turf,
+        selected_date=selected_date,
+        paid=True,
+        cancelled=False,
+    ).exclude(pk=exclude_booking_id)
+    occupied_slots = set()
+    for booking in bookings:
+        occupied_slots.update(_booking_slots(booking))
+    if turf.is_default:
+        legacy_occupied_slots = set(
+            turfBooking.objects.filter(
+                days=selected_date,
+                isBooked=True,
+            ).values_list('time_slot', flat=True)
+        )
+        legacy_occupied_slots.difference_update(set(existing_slots) - occupied_slots)
+        occupied_slots.update(legacy_occupied_slots)
+    return sorted(set(slots) & occupied_slots)
+
+
+def _record_booking_payment_if_present(booking_id, **payment_values):
+    try:
+        with transaction.atomic():
+            booking = TurfBooked.objects.select_for_update().filter(pk=booking_id).first()
+            if booking is None:
+                return False
+            TurfBookingPayment.objects.create(booking=booking, **payment_values)
+            return True
+    except DatabaseError:
+        logger.exception('Could not record payment for booking %s', booking_id)
+        return False
+
+
+def _send_booking_update_email(request, booking, old_slots, new_slots, old_amount, new_amount):
+    difference = new_amount - old_amount
+    if difference > 0:
+        adjustment = f'Additional payment received: ₹{difference}.'
+    elif difference < 0:
+        adjustment = f'Price reduction: ₹{-difference} refund requested.'
+    else:
+        adjustment = 'There was no change to the booking price.'
+
+    try:
+        send_mail(
+            subject='SK Sports Park booking updated',
+            message=(
+                f'Hello {booking.name},\n\n'
+                'Your turf booking has been updated successfully.\n\n'
+                f'Turf: {booking.turf_name}\n'
+                f'Date: {booking.selected_date}\n'
+                f'Previous time slots: {", ".join(old_slots)}\n'
+                f'Updated time slots: {", ".join(new_slots)}\n'
+                f'Previous total: ₹{old_amount}\n'
+                f'Updated total: ₹{new_amount}\n'
+                f'{adjustment}\n'
+                f'Booking reference: {booking.payment_id}\n\n'
+                'SK Sports Park'
+            ),
+            from_email=settings.DEFAULT_FROM_EMAIL,
+            recipient_list=[booking.email],
+            fail_silently=False,
+        )
+    except Exception:
+        logger.exception('Booking %s was updated but its notification email could not be sent', booking.pk)
+        messages.warning(
+            request,
+            'Booking updated, but we could not send the email notification. Please check your email address or contact the venue.',
+        )
+        return False
+    return True
 
 
 def _request_razorpay_refund(payment_id, amount_paise, booking_id):
@@ -452,11 +579,20 @@ def index(request):
         TurfSettings.objects.create()
     
     turf_settings = TurfSettings.objects.first()
+    public_feedback = Feedback.objects.only(
+        'rating',
+        'message',
+        'admin_response',
+        'created_at',
+    )
+    context = {
+        'turf': turf_settings,
+        'feedback_items': public_feedback,
+    }
     
     if request.user.is_authenticated:
-        username = request.user.username
-        return render(request, 'mainpage_index.html', {'username': username, 'turf': turf_settings})
-    return render(request, 'mainpage_index.html', {'turf': turf_settings})
+        context['username'] = request.user.username
+    return render(request, 'mainpage_index.html', context)
 
 
 def initialize_time_slots():
@@ -1024,6 +1160,44 @@ def owner_analytics(request):
     
     return render(request, 'owner_analytics.html', context)
 
+
+@login_required(login_url='owner_login')
+def owner_feedback(request):
+    if not request.user.is_staff:
+        return redirect('book_now')
+
+    feedback_items = Feedback.objects.select_related('user').all()
+    bound_feedback = None
+    bound_form = None
+
+    if request.method == 'POST':
+        feedback_id = request.POST.get('feedback_id', '')
+        if not feedback_id.isascii() or not feedback_id.isdigit():
+            messages.error(request, 'Select valid feedback to update.')
+            return redirect('owner_feedback')
+        feedback_item = get_object_or_404(Feedback, pk=feedback_id)
+        bound_form = FeedbackAdminForm(request.POST, instance=feedback_item)
+        bound_feedback = feedback_item
+        if bound_form.is_valid():
+            bound_form.save()
+            messages.success(request, 'Feedback updated successfully.')
+            return redirect('owner_feedback')
+        messages.error(request, 'Please correct the feedback update form.')
+
+    feedback_forms = []
+    for feedback_item in feedback_items:
+        form = (
+            bound_form
+            if feedback_item.pk == getattr(bound_feedback, 'pk', None)
+            else FeedbackAdminForm(instance=feedback_item)
+        )
+        feedback_forms.append((feedback_item, form))
+
+    return render(request, 'owner_feedback.html', {
+        'feedback_forms': feedback_forms,
+    })
+
+
 @login_required(login_url='login')
 def slot_details(request):
     # Clean up stale pending bookings
@@ -1294,13 +1468,180 @@ def turfBilling(request):
         'booking_time': booking_time,
         'slots': slots,
     }
+    request.session.pop('pending_razorpay_booking_edit', None)
     return _render_checkout(request, details, order)
+
+
+def _apply_booking_edit_payment(request, edit_intent, payment_id, payment, order_id):
+    slots = edit_intent.get('new_slots')
+    old_slots = edit_intent.get('old_slots')
+    try:
+        booking_id = int(edit_intent.get('booking_id'))
+        expected_amount = int(edit_intent.get('old_amount'))
+        new_amount = int(edit_intent.get('new_amount'))
+        charge_amount = int(edit_intent.get('charge_amount'))
+    except (TypeError, ValueError):
+        messages.error(request, 'The booking edit details are invalid. Contact the venue.')
+        return
+    if (
+        not isinstance(slots, list)
+        or not slots
+        or any(slot not in SLOT_IDS for slot in slots)
+        or not isinstance(old_slots, list)
+        or charge_amount <= 0
+        or new_amount - expected_amount != charge_amount
+    ):
+        messages.error(request, 'The booking edit details are invalid. Contact the venue.')
+        return
+
+    try:
+        with transaction.atomic():
+            booking = TurfBooked.objects.select_for_update().get(
+                pk=booking_id,
+                email=request.user.email,
+                paid=True,
+                cancelled=False,
+            )
+            current_slots = _booking_slots(booking)
+            turf = Turf.objects.select_for_update().filter(pk=booking.turf_id).first()
+            now = _current_time()
+            booking_start = _booking_start_datetime(booking)
+            if (
+                turf is None
+                or not turf.is_active
+                or booking.amount != expected_amount
+                or set(current_slots) != set(old_slots)
+                or booking.selected_date != edit_intent.get('selected_date')
+                or turf.pk != edit_intent.get('turf_id')
+                or booking_start is None
+                or now >= booking_start
+                or any(
+                    _slot_start_datetime(booking.selected_date, slot) <= now
+                    for slot in slots
+                )
+            ):
+                raise BookingSlotsUnavailable([])
+
+            conflicts = _booking_slot_conflicts(
+                turf,
+                booking.selected_date,
+                slots,
+                booking.pk,
+                current_slots,
+            )
+            if conflicts:
+                raise BookingSlotsUnavailable(conflicts)
+
+            booking.slots = json.dumps(slots)
+            booking.amount = new_amount
+            booking.save(update_fields=['slots', 'amount'])
+            TurfBookingPayment.objects.create(
+                booking=booking,
+                payment_id=payment_id,
+                amount=charge_amount,
+            )
+            _update_default_turf_slot_records(
+                turf,
+                booking.selected_date,
+                current_slots,
+                slots,
+            )
+    except BookingSlotsUnavailable as exc:
+        try:
+            refund_id, refund_status = _request_razorpay_refund(
+                payment_id,
+                charge_amount * 100,
+                order_id,
+            )
+            _record_booking_payment_if_present(
+                booking_id,
+                payment_id=payment_id,
+                amount=charge_amount,
+                refunded_amount=charge_amount,
+                refund_id=refund_id,
+                refund_status=refund_status,
+            )
+        except RefundProcessingError:
+            logger.exception(
+                'Could not refund payment %s after booking edit conflict',
+                payment_id,
+            )
+            _record_booking_payment_if_present(
+                booking_id,
+                payment_id=payment_id,
+                amount=charge_amount,
+                refund_status='review_required',
+            )
+            messages.error(
+                request,
+                'The additional payment was captured but the requested slots could not be confirmed. Our team will review the refund; contact support with payment ID '
+                f'{payment_id}.',
+            )
+            return
+        if exc.slots:
+            messages.error(
+                request,
+                'The selected slots became unavailable before payment completed. The additional payment refund is '
+                f'{refund_status} ({refund_id}).',
+            )
+        else:
+            messages.error(
+                request,
+                'The booking changed or expired before payment completed. The additional payment refund is '
+                f'{refund_status} ({refund_id}).',
+            )
+    except TurfBooked.DoesNotExist:
+        try:
+            refund_id, refund_status = _request_razorpay_refund(
+                payment_id,
+                charge_amount * 100,
+                order_id,
+            )
+            messages.error(
+                request,
+                'The booking no longer exists. The additional payment refund is '
+                f'{refund_status} ({refund_id}).',
+            )
+        except RefundProcessingError:
+            logger.exception('Could not refund edit payment %s for missing booking', payment_id)
+            messages.error(
+                request,
+                'The booking no longer exists and the additional payment refund needs review. Contact support with payment ID '
+                f'{payment_id}.',
+            )
+    except (DatabaseError, ValueError, TypeError, KeyError, IndexError):
+        logger.exception('Could not apply booking edit payment %s', payment_id)
+        _record_booking_payment_if_present(
+            booking_id,
+            payment_id=payment_id,
+            amount=charge_amount,
+            refund_status='review_required',
+        )
+        messages.error(
+            request,
+            'The additional payment was captured but the booking update failed. Contact support with payment ID '
+            f'{payment_id}.',
+        )
+        return
+    else:
+        _send_booking_update_email(
+            request,
+            booking,
+            old_slots,
+            slots,
+            expected_amount,
+            new_amount,
+        )
+        messages.success(request, 'Booking updated and the additional payment was confirmed.')
 
 
 @login_required(login_url='login')
 @require_POST
 def success(request):
-    intent = request.session.get('pending_razorpay_booking')
+    edit_intent = request.session.get('pending_razorpay_booking_edit')
+    intent = edit_intent or request.session.get('pending_razorpay_booking')
+    is_booking_edit = edit_intent is not None
+    failure_url = 'orderHistory' if is_booking_edit else 'book_now'
     order_id = request.POST.get('razorpay_order_id', '')
     payment_id = request.POST.get('razorpay_payment_id', '')
     signature = request.POST.get('razorpay_signature', '')
@@ -1314,7 +1655,7 @@ def success(request):
         or not signature
     ):
         messages.error(request, 'The payment confirmation is invalid or has expired.')
-        return redirect('book_now')
+        return redirect(failure_url)
 
     key_secret = getattr(settings, 'RAZOR_KEY_SECRET', '')
     expected_signature = hmac.new(
@@ -1325,15 +1666,18 @@ def success(request):
     if not key_secret or not hmac.compare_digest(expected_signature, signature):
         logger.warning('Invalid Razorpay checkout signature for user %s', request.user.pk)
         messages.error(request, 'Payment verification failed. Your booking has not been confirmed.')
-        return redirect('book_now')
+        return redirect(failure_url)
 
     try:
         payment = _razorpay_request('GET', f'payments/{payment_id}')
     except RazorpayError as exc:
         messages.error(request, str(exc))
-        return redirect('book_now')
+        return redirect(failure_url)
 
-    expected_amount = intent.get('amount', 0) * 100
+    expected_amount = intent.get(
+        'charge_amount' if is_booking_edit else 'amount',
+        0,
+    ) * 100
     if (
         payment.get('id') != payment_id
         or payment.get('order_id') != order_id
@@ -1343,7 +1687,12 @@ def success(request):
     ):
         logger.warning('Razorpay payment details failed validation for order %s', order_id)
         messages.error(request, 'Payment is not captured or does not match this booking.')
-        return redirect('book_now')
+        return redirect(failure_url)
+
+    if is_booking_edit:
+        _apply_booking_edit_payment(request, edit_intent, payment_id, payment, order_id)
+        request.session.pop('pending_razorpay_booking_edit', None)
+        return redirect('orderHistory')
 
     if TurfBooked.objects.filter(payment_id=payment_id, paid=True).exists():
         request.session.pop('pending_razorpay_booking', None)
@@ -1416,6 +1765,11 @@ def success(request):
                 payment_method=payment.get('method', 'razorpay'),
                 paid=True,
                 is_dummy_payment=False,
+            )
+            TurfBookingPayment.objects.create(
+                booking=booking,
+                payment_id=payment_id,
+                amount=intent['amount'],
             )
             if turf.is_default:
                 for slot in booked_slots:
@@ -1564,22 +1918,267 @@ def success(request):
 
 
 @login_required(login_url='login')
+def feedback(request):
+    form = FeedbackForm(request.POST if request.method == 'POST' else None)
+    if request.method == 'POST' and form.is_valid():
+        feedback_item = form.save(commit=False)
+        feedback_item.user = request.user
+        feedback_item.save()
+        messages.success(request, 'Thank you for sharing your feedback.')
+        return redirect('feedback')
+
+    return render(request, 'feedback.html', {
+        'form': form,
+        'feedback_items': Feedback.objects.filter(user=request.user),
+    })
+
+
+@login_required(login_url='login')
 def orderHistory(request):
     my_bookings = TurfBooked.objects.filter(
-        paid=True,
-        email=request.user.email,
-        cancelled=False,
-    )
+    paid=True,
+    email=request.user.email,
+    cancelled=False,
+    ).order_by('-id')
     now = _current_time()
     for booking in my_bookings:
+        booking.selected_slots = _booking_slots(booking)
         booking_start = _booking_start_datetime(booking)
         booking.can_cancel = bool(booking_start and now < booking_start)
+        booking.can_edit = booking.can_cancel and bool(booking.turf_id)
+        booking.editable_slot_options = [
+            slot for slot in sorted(SLOT_IDS, key=SLOT_IDS.get)
+            if _slot_start_datetime(booking.selected_date, slot) > now
+        ] if booking.can_edit else []
         booking.refund_eligible = bool(
             booking_start
             and booking_start - now >= CANCELLATION_REFUND_CUTOFF
             and not booking.is_dummy_payment
         )
-    return render(request, 'orderHistory.html', {'bookings': my_bookings})
+    return render(request, 'orderHistory.html', {
+        'bookings': my_bookings,
+    })
+
+
+@login_required(login_url='login')
+@require_POST
+def edit_booking(request, id):
+    try:
+        with transaction.atomic():
+            booking = TurfBooked.objects.select_for_update().get(
+                pk=id,
+                email=request.user.email,
+                paid=True,
+                cancelled=False,
+            )
+            old_slots = _booking_slots(booking)
+            now = _current_time()
+            booking_start = _booking_start_datetime(booking)
+            if booking_start is None or now >= booking_start:
+                messages.error(request, 'A booking can only be edited before its first slot starts.')
+                return redirect('orderHistory')
+
+            turf = Turf.objects.select_for_update().filter(
+                pk=booking.turf_id,
+                is_active=True,
+            ).first()
+            if turf is None:
+                messages.error(request, 'This turf is no longer available for booking changes.')
+                return redirect('orderHistory')
+
+            new_slots = list(dict.fromkeys(
+                slot.strip() for slot in request.POST.getlist('slots') if slot.strip()
+            ))
+            if not new_slots or any(slot not in SLOT_IDS for slot in new_slots):
+                messages.error(request, 'Choose at least one valid time slot.')
+                return redirect('orderHistory')
+            new_slots.sort(key=SLOT_IDS.get)
+            if any(_slot_start_datetime(booking.selected_date, slot) <= now for slot in new_slots):
+                messages.error(request, 'Choose only time slots that have not started yet.')
+                return redirect('orderHistory')
+
+            conflicts = _booking_slot_conflicts(
+                turf,
+                booking.selected_date,
+                new_slots,
+                booking.pk,
+                old_slots,
+            )
+            if conflicts:
+                messages.error(
+                    request,
+                    f'These slots are no longer available: {", ".join(conflicts)}.',
+                )
+                return redirect('orderHistory')
+
+            if not old_slots or booking.amount % len(old_slots):
+                messages.error(
+                    request,
+                    'We could not determine the original price per slot. Contact the venue to change this booking.',
+                )
+                return redirect('orderHistory')
+            unit_price = booking.amount // len(old_slots)
+            new_amount = unit_price * len(new_slots)
+            difference = new_amount - booking.amount
+
+            if difference < 0 and not booking.is_dummy_payment:
+                if booking_start - now < CANCELLATION_REFUND_CUTOFF:
+                    messages.error(
+                        request,
+                        'A price reduction can only be refunded at least 2 hours before the first slot starts.',
+                    )
+                    return redirect('orderHistory')
+
+                refundable_payments = list(
+                    booking.payment_records.select_for_update().filter(
+                        amount__gt=F('refunded_amount')
+                    ).order_by('-created_at', '-pk')
+                )
+                if not refundable_payments:
+                    refundable_payments = [TurfBookingPayment.objects.create(
+                        booking=booking,
+                        payment_id=booking.payment_id,
+                        amount=booking.amount,
+                    )]
+                refund_remaining = -difference
+                refund_plan = []
+                for payment_record in refundable_payments:
+                    refundable_amount = payment_record.amount - payment_record.refunded_amount
+                    refund_amount = min(refundable_amount, refund_remaining)
+                    if refund_amount:
+                        refund_plan.append((payment_record, refund_amount))
+                        refund_remaining -= refund_amount
+                    if refund_remaining == 0:
+                        break
+                if refund_remaining:
+                    messages.error(
+                        request,
+                        'The refundable payment balance does not cover this price reduction. Contact the venue to change this booking.',
+                    )
+                    return redirect('orderHistory')
+                refund_statuses = []
+                total_refunded = 0
+                for payment_record, refund_amount in refund_plan:
+                    try:
+                        refund_id, payment_refund_status = _request_razorpay_refund(
+                            payment_record.payment_id,
+                            refund_amount * 100,
+                            booking.pk,
+                        )
+                    except RefundProcessingError as exc:
+                        logger.error('Booking %s edit refund failed: %s', booking.pk, exc)
+                        if total_refunded:
+                            messages.error(
+                                request,
+                                f'₹{total_refunded} of the requested refund was issued, but the remaining refund could not be confirmed. The booking was not changed; contact the venue for help.',
+                            )
+                        else:
+                            messages.error(
+                                request,
+                                'We could not confirm the price adjustment refund, so the booking was not changed. Contact the venue if your payment provider shows a refund.',
+                            )
+                        return redirect('orderHistory')
+                    payment_record.refunded_amount += refund_amount
+                    payment_record.refund_id = refund_id
+                    payment_record.refund_status = payment_refund_status
+                    payment_record.save(update_fields=[
+                        'refunded_amount',
+                        'refund_id',
+                        'refund_status',
+                    ])
+                    total_refunded += refund_amount
+                    refund_statuses.append(payment_refund_status)
+                refund_status = (
+                    'pending' if 'pending' in refund_statuses else 'processed'
+                )
+            elif difference < 0:
+                refund_status = 'no_payment'
+
+            if difference > 0 and not booking.is_dummy_payment:
+                order_receipt = f'edit-{uuid.uuid4().hex[:24]}'
+                try:
+                    order = _razorpay_request('POST', 'orders', {
+                        'amount': difference * 100,
+                        'currency': 'INR',
+                        'receipt': order_receipt,
+                        'payment_capture': 1,
+                        'notes': {
+                            'user_id': str(request.user.pk),
+                            'booking_id': str(booking.pk),
+                            'adjustment_slots': ', '.join(new_slots),
+                        },
+                    })
+                except RazorpayError as exc:
+                    messages.error(request, str(exc))
+                    return redirect('orderHistory')
+                order_id = order.get('id')
+                if (
+                    not isinstance(order_id, str)
+                    or not re.fullmatch(r'order_[A-Za-z0-9]+', order_id)
+                    or order.get('amount') != difference * 100
+                    or order.get('currency') != 'INR'
+                ):
+                    logger.error('Razorpay returned an invalid edit order for booking %s', booking.pk)
+                    messages.error(request, 'The payment provider returned an invalid order. Please try again.')
+                    return redirect('orderHistory')
+
+                request.session['pending_razorpay_booking_edit'] = {
+                    'order_id': order_id,
+                    'user_id': request.user.pk,
+                    'booking_id': booking.pk,
+                    'turf_id': turf.pk,
+                    'selected_date': booking.selected_date,
+                    'old_amount': booking.amount,
+                    'old_slots': old_slots,
+                    'new_amount': new_amount,
+                    'new_slots': new_slots,
+                    'charge_amount': difference,
+                }
+                request.session.pop('pending_razorpay_booking', None)
+                details = {
+                    'username': request.user.username,
+                    'email': request.user.email,
+                    'turf_name': booking.turf_name,
+                    'selectedDate': booking.selected_date,
+                    'bookedSlots': new_slots,
+                    'totalAmount': difference,
+                }
+                return render(request, 'turfBilling.html', {
+                    'details': details,
+                    'razorpay_order': order,
+                    'razorpay_key_id': settings.RAZOR_KEY_ID,
+                    'razorpay_mode': getattr(settings, 'RAZORPAY_MODE', 'test'),
+                    'checkout_error': None,
+                    'is_booking_edit': True,
+                    'booking_new_total': new_amount,
+                })
+
+            booking.slots = json.dumps(new_slots)
+            booking.amount = new_amount if difference >= 0 or booking.is_dummy_payment else booking.amount + difference
+            booking.save(update_fields=['slots', 'amount'])
+            _update_default_turf_slot_records(turf, booking.selected_date, old_slots, new_slots)
+
+        _send_booking_update_email(
+            request,
+            booking,
+            old_slots,
+            new_slots,
+            booking.amount - difference,
+            booking.amount,
+        )
+        if difference < 0 and booking.is_dummy_payment:
+            messages.success(request, 'Booking updated. This demo booking did not charge real money.')
+        elif difference < 0:
+            messages.success(request, f'Booking updated. A refund of ₹{-difference} is {refund_status}.')
+        else:
+            messages.success(request, 'Booking details updated successfully.')
+    except TurfBooked.DoesNotExist:
+        messages.error(request, 'Booking not found or you do not have permission to edit it.')
+    except (DatabaseError, ValueError, TypeError):
+        logger.exception('Could not update booking %s', id)
+        messages.error(request, 'We could not update this booking. Please try again or contact the venue.')
+
+    return redirect('orderHistory')
 
 
 @login_required(login_url='login')
@@ -1634,6 +2233,11 @@ def delete_booking(request, id):
                 booking_id = booking.pk
                 was_paid = booking.paid
                 is_dummy_payment = booking.is_dummy_payment
+                refund_sources = list(
+                    booking.payment_records.select_for_update().filter(
+                        amount__gt=F('refunded_amount')
+                    )
+                )
             else:
                 selectedDate = booking.selected_date
                 slots = _booking_slots(booking)
@@ -1647,62 +2251,75 @@ def delete_booking(request, id):
                 was_paid = booking.paid
                 is_dummy_payment = booking.is_dummy_payment
 
-            if booking.turf_id and booking.turf.is_default:
-                bookedSlots = [SLOT_IDS[slot] for slot in slots if slot in SLOT_IDS]
-                try:
-                    chosen_day = datetime.strptime(booking_date, '%Y-%m-%d').strftime('%A')
-                    day_idx = {
-                        'Monday': 0, 'Tuesday': 1, 'Wednesday': 2,
-                        'Thursday': 3, 'Friday': 4, 'Saturday': 5, 'Sunday': 6,
-                    }[chosen_day]
-                    matrix = bookslot.objects.get(id='1')
-                    matrix_week = json.loads(matrix.week)
-                    for slot_id in bookedSlots:
-                        if 1 <= slot_id <= 19:
-                            matrix_week[day_idx][slot_id] = 0
-                    matrix.week = json.dumps(matrix_week)
-                    matrix.save(update_fields=['week'])
-                except (bookslot.DoesNotExist, ValueError, KeyError, IndexError, TypeError):
-                    logger.exception('Could not update the booking matrix for booking %s', booking_id)
-
-                for slot_time in slots:
-                    slot_obj = turfBooking.objects.filter(
-                        time_slot=slot_time,
-                        days=booking_date,
-                        isBooked=True,
-                    ).first()
-                    if slot_obj:
-                        slot_obj.isBooked = False
-                        slot_obj.days = ''
-                        slot_obj.save(update_fields=['isBooked', 'days'])
+            booking_turf = (
+                booking.turf
+                if booking.turf_id
+                else Turf.objects.filter(is_default=True).first()
+            )
+            if booking_turf and booking_turf.is_default:
+                _update_default_turf_slot_records(
+                    booking_turf,
+                    booking_date,
+                    slots,
+                    [],
+                )
 
             if request.user.is_staff:
                 booking.delete()
 
         if not request.user.is_staff:
             if refund_eligible:
-                try:
-                    if booking_amount <= 0:
-                        raise RefundProcessingError('The recorded payment amount is invalid.')
-                    refund_id, refund_status = _request_razorpay_refund(
-                        booking_reference,
-                        booking_amount * 100,
-                        booking_id,
-                    )
-                    TurfBooked.objects.filter(pk=booking_id).update(
-                        refund_id=refund_id,
-                        refund_status=refund_status,
-                    )
-                except RefundProcessingError as exc:
-                    TurfBooked.objects.filter(pk=booking_id).update(
-                        refund_status='review_required',
-                    )
-                    logger.error(
-                        'Refund for cancelled booking %s requires review: %s',
-                        booking_id,
-                        exc,
-                    )
+                if refund_sources:
+                    refund_requests = [
+                        (source.payment_id, source.amount - source.refunded_amount, source)
+                        for source in refund_sources
+                    ]
+                else:
+                    refund_requests = [(booking_reference, booking_amount, None)]
+                total_refunded = 0
+                refund_statuses = []
+                refund_id = ''
+                for payment_id, remaining_amount, source in refund_requests:
+                    if remaining_amount <= 0:
+                        continue
+                    try:
+                        refund_id, source_status = _request_razorpay_refund(
+                            payment_id,
+                            remaining_amount * 100,
+                            booking_id,
+                        )
+                        total_refunded += remaining_amount
+                        refund_statuses.append(source_status)
+                        if source is not None:
+                            source.refunded_amount += remaining_amount
+                            source.refund_id = refund_id
+                            source.refund_status = source_status
+                            source.save(update_fields=[
+                                'refunded_amount',
+                                'refund_id',
+                                'refund_status',
+                            ])
+                    except RefundProcessingError as exc:
+                        logger.error(
+                            'Refund for cancelled booking %s payment %s requires review: %s',
+                            booking_id,
+                            payment_id,
+                            exc,
+                        )
+                        refund_statuses.append('review_required')
+                if not refund_statuses:
+                    refund_statuses.append('review_required')
+                if 'review_required' in refund_statuses:
                     refund_status = 'review_required'
+                elif 'pending' in refund_statuses:
+                    refund_status = 'pending'
+                else:
+                    refund_status = 'processed'
+                TurfBooked.objects.filter(pk=booking_id).update(
+                    refund_id=refund_id,
+                    refund_status=refund_status,
+                )
+                booking_amount = total_refunded
             else:
                 refund_status = (
                     'no_payment'

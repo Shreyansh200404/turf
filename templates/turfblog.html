@@ -161,6 +161,7 @@
                         </button>
                         <ul class="dropdown-menu" aria-labelledby="userDropdown">
                             <li><a class="dropdown-item" href="{% url 'orderHistory' %}">My Bookings</a></li>
+                            <li><a class="dropdown-item" href="{% url 'feedback' %}">Feedback</a></li>
                             {% if user.is_staff %}
                             <li><a class="dropdown-item" href="{% url 'owner_dashboard' %}">Dashboard</a></li>
                             {% endif %}

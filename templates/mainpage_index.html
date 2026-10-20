@@ -280,7 +280,10 @@
               <a class="nav-link" href="#about-section" id="about-link">About Us</a>
             </li>
             <li class="nav-item">
-              <a class="nav-link" href="{% url 'book_now' %}">Book Now</a>
+                <a class="nav-link" href="#feedback-section">Feedback</a>
+              </li>
+              <li class="nav-item">
+                <a class="nav-link" href="{% url 'book_now' %}">Book Now</a>
             </li>
           </ul>
           <div class="d-flex">
@@ -291,6 +294,7 @@
               </button>
               <ul class="dropdown-menu" aria-labelledby="userDropdown">
                 <li><a class="dropdown-item" href="{% url 'orderHistory' %}">My Bookings</a></li>
+                <li><a class="dropdown-item" href="{% url 'feedback' %}">Feedback</a></li>
                 {% if user.is_staff %}
                 <li><a class="dropdown-item" href="{% url 'owner_dashboard' %}">Dashboard</a></li>
                 {% endif %}
@@ -408,7 +412,47 @@
       </div>
     </section>
 
-   
+    <section class="py-5 bg-light" id="feedback-section">
+      <div class="container">
+        <div class="text-center mb-5">
+          <h2 class="fw-bold">Player Feedback</h2>
+          <p class="lead text-muted">Experiences shared by our community</p>
+        </div>
+        <div class="row g-4">
+          {% for item in feedback_items %}
+            <div class="col-md-6 col-lg-4">
+              <article class="card h-100 border-0 shadow-sm">
+                <div class="card-body p-4">
+                  <div class="text-warning mb-3" aria-label="{{ item.rating }} out of 5 stars">
+                    {% for star in "12345" %}
+                      {% if forloop.counter <= item.rating %}
+                        <i class="fas fa-star" aria-hidden="true"></i>
+                      {% else %}
+                        <i class="far fa-star" aria-hidden="true"></i>
+                      {% endif %}
+                    {% endfor %}
+                    <span class="text-muted ms-2">{{ item.rating }}/5</span>
+                  </div>
+                  <blockquote class="mb-3">{{ item.message|linebreaksbr }}</blockquote>
+                  {% if item.admin_response %}
+                    <div class="border-top pt-3">
+                      <p class="small fw-bold mb-1">Response from the team</p>
+                      <p class="small text-muted mb-0">{{ item.admin_response|linebreaksbr }}</p>
+                    </div>
+                  {% endif %}
+                  <p class="small text-muted mb-0 mt-3">{{ item.created_at|date:"M j, Y" }}</p>
+                </div>
+              </article>
+            </div>
+          {% empty %}
+            <div class="col-12">
+              <p class="text-center text-muted">No feedback has been shared yet.</p>
+            </div>
+          {% endfor %}
+        </div>
+      </div>
+    </section>
+
     <!-- Contact Info -->
     <section class="py-5">
       <div class="container">

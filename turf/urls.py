@@ -21,6 +21,8 @@ urlpatterns = [
     path("logout/", views.logout, name="logout"),
     path('turfBilling/', views.turfBilling, name='turfBilling'),
     path('orderHistory/', views.orderHistory, name="orderHistory"),
+    path('booking/<int:id>/edit/', views.edit_booking, name='edit_booking'),
+    path('feedback/', views.feedback, name='feedback'),
     path('allBookings/', views.allBookings, name="allBookings"),
     path('delete_booking/<int:id>/', views.delete_booking, name="delete_booking"),
     path('success/', views.success, name='success'),
@@ -41,6 +43,7 @@ urlpatterns = [
     path('owner/turfs/<int:turf_id>/edit/', views.owner_turf_edit, name='owner_turf_edit'),
     path('owner/turfs/<int:turf_id>/delete/', views.owner_turf_delete, name='owner_turf_delete'),
     path('owner/analytics/', views.owner_analytics, name='owner_analytics'),
+    path('owner/feedback/', views.owner_feedback, name='owner_feedback'),
 
     # Password reset by email OTP
     path('password_reset/', views.password_reset, name='password_reset'),

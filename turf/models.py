@@ -1,4 +1,5 @@
 from django.db import models
+from django.conf import settings
 
 # Create your models here.
 
@@ -44,6 +45,26 @@ class TurfBooked(models.Model):
     refund_status = models.CharField(max_length=20, default="not_applicable")
 
 
+class TurfBookingPayment(models.Model):
+    booking = models.ForeignKey(
+        TurfBooked,
+        on_delete=models.CASCADE,
+        related_name='payment_records',
+    )
+    payment_id = models.CharField(max_length=100)
+    amount = models.PositiveIntegerField()
+    refunded_amount = models.PositiveIntegerField(default=0)
+    refund_id = models.CharField(max_length=100, blank=True)
+    refund_status = models.CharField(max_length=20, default='not_applicable')
+    created_at = models.DateTimeField(auto_now_add=True)
+
+    class Meta:
+        ordering = ('created_at', 'pk')
+
+    def __str__(self):
+        return f'{self.payment_id} for booking {self.booking_id}'
+
+
 class Turf(models.Model):
     name = models.CharField(max_length=200)
     slot_price = models.PositiveIntegerField(default=500)
@@ -68,3 +89,34 @@ class TurfSettings(models.Model):
     
     def __str__(self):
         return self.name
+
+
+class Feedback(models.Model):
+    STATUS_NEW = 'new'
+    STATUS_REVIEWED = 'reviewed'
+    STATUS_RESOLVED = 'resolved'
+    STATUS_CHOICES = (
+        (STATUS_NEW, 'New'),
+        (STATUS_REVIEWED, 'Reviewed'),
+        (STATUS_RESOLVED, 'Resolved'),
+    )
+
+    user = models.ForeignKey(
+        settings.AUTH_USER_MODEL,
+        on_delete=models.CASCADE,
+        related_name='feedback_entries',
+    )
+    rating = models.PositiveSmallIntegerField(
+        choices=tuple((value, f'{value} star{"s" if value != 1 else ""}') for value in range(1, 6)),
+    )
+    message = models.TextField(max_length=2000)
+    status = models.CharField(max_length=20, choices=STATUS_CHOICES, default=STATUS_NEW)
+    admin_response = models.TextField(blank=True)
+    created_at = models.DateTimeField(auto_now_add=True)
+    updated_at = models.DateTimeField(auto_now=True)
+
+    class Meta:
+        ordering = ('-created_at', '-pk')
+
+    def __str__(self):
+        return f'Feedback from {self.user} ({self.rating}/5)'

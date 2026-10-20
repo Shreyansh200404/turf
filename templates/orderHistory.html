@@ -1,300 +1,965 @@
 {% load static %}
-
 <!DOCTYPE html>
 <html lang="en">
 
 <head>
-    <title>Order History</title>
-    <meta charset="utf-8">
-    <meta http-equiv="X-UA-Compatible" content="IE=edge">
-    <meta name="description" content="Travello template project">
-    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
 
-    <!-- Bootstrap CSS -->
-    <link rel="stylesheet" type="text/css"
-        href="{% static 'styles/bootstrap4/bootstrap.min.css' %}">
-
-    <link href="{% static 'plugins/font-awesome-4.7.0/css/font-awesome.min.css' %}"
-        rel="stylesheet" type="text/css">
-
-    <link rel="stylesheet" type="text/css"
-        href="{% static 'styles/main_styles.css' %}">
-
-    <link rel="stylesheet" type="text/css"
-        href="{% static 'styles/responsive.css' %}">
+    <title>My Bookings - The SK Sports Turf</title>
 
     <!-- Bootstrap 5 -->
-    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.0.1/dist/css/bootstrap.min.css"
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.1.3/dist/css/bootstrap.min.css"
+        rel="stylesheet">
+
+    <!-- Font Awesome -->
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/5.15.4/css/all.min.css"
         rel="stylesheet">
 
     <style>
-        body {
-            background-color: #f5f7fa;
+        * {
+            box-sizing: border-box;
         }
 
-        .page-title {
-            font-size: 40px;
-            font-weight: 700;
-            color: #0d6efd;
+        body {
+            min-height: 100vh;
+            display: flex;
+            flex-direction: column;
+            background: #f4f7fb;
+            color: #212529;
         }
+
+        /* =========================
+           NAVBAR
+        ========================== */
+
+        .navbar {
+            background: linear-gradient(135deg, #111827, #212529);
+            min-height: 70px;
+            box-shadow: 0 3px 15px rgba(0, 0, 0, 0.12);
+        }
+
+        .navbar-brand {
+            color: #fff !important;
+            font-size: 1.35rem;
+            font-weight: 700;
+            letter-spacing: 0.3px;
+        }
+
+        .nav-link {
+            color: rgba(255, 255, 255, 0.85) !important;
+            font-weight: 500;
+            margin-left: 10px;
+            padding: 8px 14px !important;
+            border-radius: 8px;
+            transition: all 0.25s ease;
+        }
+
+        .nav-link:hover {
+            color: #fff !important;
+            background: rgba(255, 255, 255, 0.1);
+        }
+
+        /* =========================
+           MAIN CONTENT
+        ========================== */
+
+        .main-content {
+            flex: 1;
+            padding: 45px 0 60px;
+        }
+
+        /* =========================
+           PAGE HEADING
+        ========================== */
+
+        .page-heading {
+            text-align: center;
+            margin-bottom: 40px;
+        }
+
+        .page-heading .icon {
+            width: 65px;
+            height: 65px;
+            margin: 0 auto 15px;
+            border-radius: 18px;
+            background: linear-gradient(135deg, #0d6efd, #198754);
+            color: white;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 28px;
+            box-shadow: 0 10px 25px rgba(13, 110, 253, 0.2);
+        }
+
+        .page-heading h1 {
+            font-size: 2.2rem;
+            font-weight: 700;
+            margin-bottom: 8px;
+            color: #172033;
+        }
+
+        .page-heading p {
+            color: #6c757d;
+            margin-bottom: 0;
+            font-size: 1rem;
+        }
+
+        /* =========================
+           BOOKING CARD
+        ========================== */
 
         .booking-card {
-            border-radius: 15px;
+            background: #fff;
+            border: none;
+            border-radius: 18px;
             overflow: hidden;
-            transition: 0.3s;
+            box-shadow: 0 8px 28px rgba(0, 0, 0, 0.08);
+            transition: all 0.3s ease;
+            height: 100%;
         }
 
         .booking-card:hover {
             transform: translateY(-5px);
+            box-shadow: 0 15px 35px rgba(0, 0, 0, 0.13);
         }
 
+        .booking-card-header {
+            background: linear-gradient(135deg, #111827, #212529);
+            color: white;
+            padding: 18px 25px;
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+        }
+
+        .booking-card-header h3 {
+            margin: 0;
+            font-size: 1.15rem;
+            font-weight: 700;
+        }
+
+        .booking-number {
+            background: rgba(255, 255, 255, 0.12);
+            padding: 6px 11px;
+            border-radius: 20px;
+            font-size: 0.8rem;
+        }
+
+        .booking-card-body {
+            padding: 25px;
+        }
+
+        /* =========================
+           SECTION HEADINGS
+        ========================== */
+
         .section-title {
-            font-size: 22px;
-            font-weight: 600;
+            font-size: 1.15rem;
+            font-weight: 700;
+            color: #172033;
             margin-bottom: 20px;
+            display: flex;
+            align-items: center;
+            gap: 10px;
+        }
+
+        .section-title i {
+            color: #0d6efd;
+        }
+
+        .booking-info-section:nth-child(2) .section-title i {
+            color: #198754;
+        }
+
+        /* =========================
+           DETAILS
+        ========================== */
+
+        .detail-row {
+            display: flex;
+            align-items: flex-start;
+            gap: 12px;
+            padding: 12px;
+            margin-bottom: 10px;
+            background: #f8f9fa;
+            border-radius: 10px;
+            border: 1px solid #edf0f2;
+        }
+
+        .detail-icon {
+            width: 34px;
+            height: 34px;
+            min-width: 34px;
+            border-radius: 9px;
+            background: #e8f1ff;
+            color: #0d6efd;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 14px;
+        }
+
+        .booking-info-section:nth-child(2) .detail-icon {
+            background: #e8f7ef;
+            color: #198754;
+        }
+
+        .detail-content {
+            flex: 1;
         }
 
         .detail-label {
-            font-weight: 600;
-            color: #555;
+            display: block;
+            font-size: 0.78rem;
+            color: #6c757d;
+            margin-bottom: 2px;
+            font-weight: 500;
         }
 
         .detail-value {
-            color: #222;
+            color: #172033;
+            font-size: 0.95rem;
+            font-weight: 600;
+            word-break: break-word;
+        }
+
+        /* =========================
+           AMOUNT
+        ========================== */
+
+        .amount-box {
+            margin-top: 15px;
+            padding: 15px;
+            background: #f8f9fa;
+            border-radius: 12px;
+            border: 1px solid #e9ecef;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+
+        .amount-label {
+            color: #6c757d;
+            font-size: 0.85rem;
         }
 
         .amount {
-            font-size: 20px;
-            font-weight: bold;
-            color: #dc3545;
+            font-size: 1.4rem;
+            font-weight: 700;
+            color: #0d6efd;
         }
+
+        /* =========================
+           STATUS
+        ========================== */
+
+        .status-badge {
+            display: inline-flex;
+            align-items: center;
+            gap: 6px;
+            padding: 7px 12px;
+            border-radius: 20px;
+            background: #e8f7ef;
+            color: #198754;
+            font-size: 0.78rem;
+            font-weight: 600;
+        }
+
+        /* =========================
+           CANCEL BUTTON
+        ========================== */
 
         .btn-cancel {
-            border-radius: 8px;
-            padding: 8px 20px;
+            border: none;
+            border-radius: 10px;
+            padding: 10px 18px;
+            font-weight: 600;
+            transition: all 0.25s ease;
         }
 
+        .btn-cancel:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 6px 15px rgba(220, 53, 69, 0.18);
+        }
+
+        /* =========================
+           CARD FOOTER
+        ========================== */
+
+        .booking-card-footer {
+            padding: 18px 25px;
+            border-top: 1px solid #edf0f2;
+            background: #fff;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+
+        /* =========================
+           EMPTY STATE
+        ========================== */
+
+        .empty-state {
+            background: #fff;
+            border-radius: 18px;
+            padding: 55px 25px;
+            text-align: center;
+            box-shadow: 0 8px 28px rgba(0, 0, 0, 0.07);
+        }
+
+        .empty-state-icon {
+            width: 70px;
+            height: 70px;
+            border-radius: 50%;
+            background: #e9f2ff;
+            color: #0d6efd;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            margin: 0 auto 20px;
+            font-size: 28px;
+        }
+
+        .empty-state h4 {
+            font-weight: 700;
+            margin-bottom: 8px;
+            color: #172033;
+        }
+
+        .empty-state p {
+            color: #6c757d;
+            margin-bottom: 20px;
+        }
+
+        /* =========================
+           HOME BUTTON
+        ========================== */
+
         .home-btn {
-            padding: 10px 25px;
+            border: none;
             border-radius: 10px;
+            padding: 11px 20px;
+            font-weight: 600;
+            background: linear-gradient(135deg, #198754, #157347);
+            color: white;
+            transition: all 0.25s ease;
+        }
+
+        .home-btn:hover {
+            background: linear-gradient(135deg, #157347, #146c43);
+            color: white;
+            transform: translateY(-2px);
+            box-shadow: 0 6px 15px rgba(25, 135, 84, 0.25);
+        }
+
+        /* =========================
+           ALERT
+        ========================== */
+
+        .alert {
+            border: none;
+            border-radius: 12px;
+        }
+
+        /* =========================
+           MODAL
+        ========================== */
+
+        .modal-content {
+            border: none;
+            border-radius: 18px;
+            overflow: hidden;
+            box-shadow: 0 15px 45px rgba(0, 0, 0, 0.2);
+        }
+
+        .modal-header {
+            background: linear-gradient(135deg, #111827, #212529);
+            color: white;
+            border-bottom: none;
+            padding: 18px 22px;
+        }
+
+        .modal-title {
+            font-weight: 700;
+        }
+
+        .modal-header .btn-close {
+            filter: invert(1);
+        }
+
+        .modal-body {
+            padding: 25px;
+            color: #495057;
+            line-height: 1.6;
+        }
+
+        .modal-footer {
+            border-top: 1px solid #edf0f2;
+            padding: 15px 22px;
+        }
+
+        /* =========================
+           FOOTER
+        ========================== */
+
+        .footer {
+            background: #111827;
+            color: rgba(255, 255, 255, 0.75);
+            padding: 18px 0;
+            margin-top: auto;
+            text-align: center;
+            font-size: 0.9rem;
+        }
+
+        /* =========================
+           RESPONSIVE
+        ========================== */
+
+        @media (max-width: 767px) {
+
+            .main-content {
+                padding: 30px 0 45px;
+            }
+
+            .page-heading h1 {
+                font-size: 1.8rem;
+            }
+
+            .booking-card-body {
+                padding: 20px;
+            }
+
+            .booking-card-header {
+                padding: 16px 20px;
+            }
+
+            .booking-card-footer {
+                padding: 16px 20px;
+                flex-direction: column;
+                align-items: stretch;
+                gap: 12px;
+            }
+
+            .booking-card-footer .btn {
+                width: 100%;
+            }
+
+            .nav-link {
+                margin-left: 0;
+                padding: 8px 9px !important;
+                font-size: 0.9rem;
+            }
+
+            .navbar-brand {
+                font-size: 1.05rem;
+            }
+
+            .detail-row {
+                padding: 10px;
+            }
         }
     </style>
 </head>
 
 <body>
 
-<div class="super_container">
+    <!-- =========================
+         NAVBAR
+    ========================== -->
 
-    <!-- Messages -->
-    {% if messages %}
-    <div class="container mt-4">
-        {% for message in messages %}
-        <div class="alert {% if message.tags == 'error' %} alert-danger {% else %} alert-{{ message.tags }} {% endif %} alert-dismissible fade show"
-            role="alert">
+    <nav class="navbar navbar-expand-lg">
 
-            {{ message }}
+        <div class="container">
 
-            <button type="button"
-                class="btn-close"
-                data-bs-dismiss="alert"
-                aria-label="Close"></button>
+            <a class="navbar-brand" href="/">
+                <i class="fas fa-futbol me-2"></i>
+                The SK Sports Turf
+            </a>
+
+            <div class="navbar-nav ms-auto d-flex flex-row">
+
+                <a class="nav-link" href="/">
+                    <i class="fas fa-home me-1"></i>
+                    Home
+                </a>
+
+                {% if user.is_authenticated %}
+
+                    <a class="nav-link" href="{% url 'feedback' %}">
+                        <i class="fas fa-comment-dots me-1"></i>
+                        Feedback
+                    </a>
+
+                    <a class="nav-link" href="/logout">
+                        <i class="fas fa-sign-out-alt me-1"></i>
+                        Logout
+                    </a>
+
+                {% else %}
+
+                    <a class="nav-link" href="/login">
+                        <i class="fas fa-sign-in-alt me-1"></i>
+                        Login
+                    </a>
+
+                {% endif %}
+
+            </div>
+
         </div>
-        {% endfor %}
-    </div>
-    {% endif %}
 
-    <!-- Page Heading -->
-    <div class="container mt-5 mb-4">
-        <h1 class="page-title text-center">
-            My Bookings
-        </h1>
-    </div>
+    </nav>
 
-    <!-- Bookings -->
-    {% if bookings %}
 
-    {% for i in bookings %}
+    <!-- =========================
+         MAIN CONTENT
+    ========================== -->
 
-    <div class="container mb-4">
+    <main class="container main-content">
 
-        <div class="card booking-card shadow border-0">
+        <!-- Messages -->
 
-            <div class="card-body p-4">
+        {% if messages %}
 
-                <div class="row">
+        <div class="mb-4">
 
-                    <!-- Left Section -->
-                    <div class="col-md-6 mb-4">
+            {% for message in messages %}
 
-                        <h3 class="section-title text-primary">
-                            Booking Details
-                        </h3>
+            <div class="alert
+                {% if message.tags == 'error' %}
+                    alert-danger
+                {% else %}
+                    alert-{{ message.tags }}
+                {% endif %}
+                alert-dismissible fade show"
+                role="alert">
 
-                        <div class="row mb-3">
-                            <div class="col-5 detail-label">
-                                Name :
+                <i class="fas fa-info-circle me-2"></i>
+
+                {{ message }}
+
+                <button type="button"
+                    class="btn-close"
+                    data-bs-dismiss="alert"
+                    aria-label="Close">
+                </button>
+
+            </div>
+
+            {% endfor %}
+
+        </div>
+
+        {% endif %}
+
+
+        <!-- =========================
+             PAGE HEADING
+        ========================== -->
+
+        <div class="page-heading">
+
+            <div class="icon">
+                <i class="fas fa-calendar-check"></i>
+            </div>
+
+            <h1>My Bookings</h1>
+
+            <p>
+                View your turf bookings and manage your reservations.
+            </p>
+
+        </div>
+
+
+        <!-- =========================
+             BOOKINGS
+        ========================== -->
+
+        {% if bookings %}
+
+        {% for i in bookings %}
+
+        <div class="booking-card mb-4">
+
+            <!-- Card Header -->
+
+            <div class="booking-card-header">
+
+                <h3>
+                    <i class="fas fa-futbol me-2"></i>
+                    {{ i.turf_name }}
+                </h3>
+
+                <span class="booking-number">
+                    <i class="fas fa-check-circle me-1"></i>
+                    Confirmed
+                </span>
+
+            </div>
+
+
+            <!-- Card Body -->
+
+            <div class="booking-card-body">
+
+                <div class="row g-4">
+
+                    <!-- =========================
+                         BOOKING DETAILS
+                    ========================== -->
+
+                    <div class="col-lg-6">
+
+                        <div class="booking-info-section">
+
+                            <h3 class="section-title">
+                                <i class="fas fa-user"></i>
+                                Booking Details
+                            </h3>
+
+
+                            <div class="detail-row">
+
+                                <div class="detail-icon">
+                                    <i class="fas fa-user"></i>
+                                </div>
+
+                                <div class="detail-content">
+
+                                    <span class="detail-label">
+                                        Name
+                                    </span>
+
+                                    <span class="detail-value">
+                                        {{ i.name }}
+                                    </span>
+
+                                </div>
+
                             </div>
 
-                            <div class="col-7 detail-value">
-                                {{ i.name }}
-                            </div>
-                        </div>
 
-                        <div class="row mb-3">
-                            <div class="col-5 detail-label">
-                                Turf :
-                            </div>
+                            <div class="detail-row">
 
-                            <div class="col-7 detail-value">
-                                {{ i.turf_name }}
-                            </div>
-                        </div>
+                                <div class="detail-icon">
+                                    <i class="fas fa-futbol"></i>
+                                </div>
 
-                        <div class="row mb-3">
-                            <div class="col-5 detail-label">
-                                Email :
-                            </div>
+                                <div class="detail-content">
 
-                            <div class="col-7 detail-value">
-                                {{ i.email }}
-                            </div>
-                        </div>
+                                    <span class="detail-label">
+                                        Turf
+                                    </span>
 
-                        <div class="row mb-3">
-                            <div class="col-5 detail-label">
-                                Booking Time :
+                                    <span class="detail-value">
+                                        {{ i.turf_name }}
+                                    </span>
+
+                                </div>
+
                             </div>
 
-                            <div class="col-7 detail-value">
-                                {{ i.booking_time }}
+
+                            <div class="detail-row">
+
+                                <div class="detail-icon">
+                                    <i class="fas fa-envelope"></i>
+                                </div>
+
+                                <div class="detail-content">
+
+                                    <span class="detail-label">
+                                        Email
+                                    </span>
+
+                                    <span class="detail-value">
+                                        {{ i.email }}
+                                    </span>
+
+                                </div>
+
                             </div>
+
+
+                            <div class="detail-row">
+
+                                <div class="detail-icon">
+                                    <i class="fas fa-clock"></i>
+                                </div>
+
+                                <div class="detail-content">
+
+                                    <span class="detail-label">
+                                        Booking Time
+                                    </span>
+
+                                    <span class="detail-value">
+                                        {{ i.booking_time }}
+                                    </span>
+
+                                </div>
+
+                            </div>
+
                         </div>
 
                     </div>
 
-                    <!-- Right Section -->
-                    <div class="col-md-6 mb-4">
 
-                        <h3 class="section-title text-success">
-                            Booking Info
-                        </h3>
+                    <!-- =========================
+                         BOOKING INFO
+                    ========================== -->
 
-                        <div class="row mb-3">
-                            <div class="col-5 detail-label">
-                                Booking Date :
+                    <div class="col-lg-6">
+
+                        <div class="booking-info-section">
+
+                            <h3 class="section-title">
+                                <i class="fas fa-calendar-alt"></i>
+                                Booking Information
+                            </h3>
+
+
+                            <div class="detail-row">
+
+                                <div class="detail-icon">
+                                    <i class="fas fa-calendar"></i>
+                                </div>
+
+                                <div class="detail-content">
+
+                                    <span class="detail-label">
+                                        Booking Date
+                                    </span>
+
+                                    <span class="detail-value">
+                                        {{ i.current_date }}
+                                    </span>
+
+                                </div>
+
                             </div>
 
-                            <div class="col-7 detail-value">
-                                {{ i.current_date }}
+
+                            <div class="detail-row">
+
+                                <div class="detail-icon">
+                                    <i class="fas fa-calendar-day"></i>
+                                </div>
+
+                                <div class="detail-content">
+
+                                    <span class="detail-label">
+                                        Selected Date
+                                    </span>
+
+                                    <span class="detail-value">
+                                        {{ i.selected_date }}
+                                    </span>
+
+                                </div>
+
                             </div>
+
+
+                            <div class="detail-row">
+
+                                <div class="detail-icon">
+                                    <i class="fas fa-clock"></i>
+                                </div>
+
+                                <div class="detail-content">
+
+                                    <span class="detail-label">
+                                        Time Slot
+                                    </span>
+
+                                    <span class="detail-value">
+                                        {{ i.selected_slots|join:", " }}
+                                    </span>
+
+                                </div>
+
+                            </div>
+
+
+                            <!-- Amount -->
+
+                            <div class="amount-box">
+
+                                <span class="amount-label">
+                                    <i class="fas fa-receipt me-2"></i>
+                                    Total Amount
+                                </span>
+
+                                <span class="amount">
+                                    ₹{{ i.amount }}
+                                </span>
+
+                            </div>
+
                         </div>
 
-                        <div class="row mb-3">
-                            <div class="col-5 detail-label">
-                                Selected Date :
-                            </div>
+                    </div>
 
-                            <div class="col-7 detail-value">
-                                {{ i.selected_date }}
-                            </div>
-                        </div>
+                </div>
 
-                        <div class="row mb-3">
-                            <div class="col-5 detail-label">
-                                Time Slot :
-                            </div>
+            </div>
 
-                            <div class="col-7 detail-value">
-                                {{ i.slots }}
-                            </div>
-                        </div>
 
-                        <div class="row mb-4">
-                            <div class="col-5 detail-label">
-                                Total Amount :
-                            </div>
+            <!-- =========================
+                 CARD FOOTER
+            ========================== -->
 
-                            <div class="col-7 amount">
-                                Rs. {{ i.amount }}
-                            </div>
-                        </div>
+            <div class="booking-card-footer">
 
-                        {% if i.can_cancel %}
+                <div>
+
+                    <span class="status-badge">
+                        <i class="fas fa-check-circle"></i>
+                        Booking Active
+                    </span>
+
+                </div>
+
+                {% if i.can_edit %}
+                <button type="button"
+                    class="btn btn-outline-primary"
+                    data-bs-toggle="modal"
+                    data-bs-target="#editBooking{{ i.id }}">
+                    <i class="fas fa-edit me-2"></i>
+                    Edit Time Slots
+                </button>
+                {% endif %}
+
+                {% if i.can_cancel %}
+
+                <button type="button"
+                    class="btn btn-outline-danger btn-cancel"
+                    data-bs-toggle="modal"
+                    data-bs-target="#cancelBooking{{ i.id }}">
+
+                    <i class="fas fa-times-circle me-2"></i>
+                    Cancel Booking
+
+                </button>
+
+                {% endif %}
+
+            </div>
+
+        </div>
+
+
+        <!-- =========================
+             CANCEL MODAL
+        ========================== -->
+
+        {% if i.can_cancel %}
+
+        <div class="modal fade"
+            id="cancelBooking{{ i.id }}"
+            tabindex="-1"
+            aria-labelledby="cancelBookingLabel{{ i.id }}"
+            aria-hidden="true">
+
+            <div class="modal-dialog modal-dialog-centered">
+
+                <div class="modal-content">
+
+                    <div class="modal-header">
+
+                        <h5 class="modal-title"
+                            id="cancelBookingLabel{{ i.id }}">
+
+                            <i class="fas fa-exclamation-triangle me-2"></i>
+                            Turf Booking Cancellation
+
+                        </h5>
+
                         <button type="button"
-                            class="btn btn-outline-danger btn-cancel"
-                            data-bs-toggle="modal"
-                            data-bs-target="#cancelBooking{{ i.id }}">
-                            Cancel Booking
+                            class="btn-close"
+                            data-bs-dismiss="modal"
+                            aria-label="Close">
                         </button>
+
+                    </div>
+
+
+                    <div class="modal-body">
+
+                        {% if i.refund_eligible %}
+
+                        <div class="alert alert-success mb-0">
+
+                            <i class="fas fa-check-circle me-2"></i>
+
+                            Cancelling now is at least 2 hours before
+                            the slot start. A refund of
+                            <strong>₹{{ i.amount }}</strong>
+                            will be requested from Razorpay.
+
+                        </div>
+
+                        {% elif i.is_dummy_payment %}
+
+                        <div class="alert alert-warning mb-0">
+
+                            <i class="fas fa-info-circle me-2"></i>
+
+                            Are you sure you want to cancel?
+                            This demo payment did not charge real money
+                            and cannot be refunded.
+
+                        </div>
+
+                        {% else %}
+
+                        <div class="alert alert-danger mb-0">
+
+                            <i class="fas fa-exclamation-circle me-2"></i>
+
+                            Are you sure you want to cancel?
+                            This is less than 2 hours before the slot start,
+                            so no refund will be issued.
+
+                        </div>
+
                         {% endif %}
 
                     </div>
 
-                </div>
 
-            </div>
+                    <div class="modal-footer">
 
-        </div>
+                        <button type="button"
+                            class="btn btn-secondary"
+                            data-bs-dismiss="modal">
 
-    </div>
-
-    <!-- Modal -->
-    {% if i.can_cancel %}
-    <div class="modal fade"
-        id="cancelBooking{{i.id}}"
-        tabindex="-1"
-        aria-labelledby="cancelBookingLabel{{i.id}}"
-        aria-hidden="true">
-
-        <div class="modal-dialog">
-
-            <div class="modal-content">
-
-                <div class="modal-header">
-
-                    <h5 class="modal-title" id="cancelBookingLabel{{i.id}}">
-                        Turf Booking Cancellation
-                    </h5>
-
-                    <button type="button"
-                        class="btn-close"
-                        data-bs-dismiss="modal"
-                        aria-label="Close"></button>
-
-                </div>
-
-                <div class="modal-body">
-                    {% if i.refund_eligible %}
-                    Cancelling now is at least 2 hours before the slot start. A refund of Rs. {{ i.amount }} will be requested from Razorpay.
-                    {% elif i.is_dummy_payment %}
-                    Are you sure you want to cancel? This demo payment did not charge real money and cannot be refunded.
-                    {% else %}
-                    Are you sure you want to cancel? This is less than 2 hours before the slot start, so no refund will be issued.
-                    {% endif %}
-                </div>
-
-                <div class="modal-footer">
-
-                    <button type="button"
-                        class="btn btn-secondary"
-                        data-bs-dismiss="modal">
-
-                        No
-
-                    </button>
-
-                    <form action="{% url 'delete_booking' i.id %}" method="post">
-
-                        {% csrf_token %}
-
-                        <button type="submit"
-                            class="btn btn-danger">
-
-                            Cancel booking
+                            <i class="fas fa-times me-1"></i>
+                            No
 
                         </button>
 
-                    </form>
+
+                        <form action="{% url 'delete_booking' i.id %}"
+                            method="post">
+
+                            {% csrf_token %}
+
+                            <button type="submit"
+                                class="btn btn-danger">
+
+                                <i class="fas fa-trash-alt me-1"></i>
+                                Cancel Booking
+
+                            </button>
+
+                        </form>
+
+                    </div>
 
                 </div>
 
@@ -302,66 +967,166 @@
 
         </div>
 
-    </div>
-    {% endif %}
+        {% endif %}
 
-    {% endfor %}
-
-    {% else %}
-
-    <div class="container">
-        <div class="alert alert-info text-center shadow-sm">
-            <h3>No Bookings Yet!</h3>
+        {% if i.can_edit %}
+        <div class="modal fade"
+            id="editBooking{{ i.id }}"
+            tabindex="-1"
+            aria-labelledby="editBookingLabel{{ i.id }}"
+            aria-hidden="true">
+            <div class="modal-dialog modal-dialog-centered modal-lg">
+                <div class="modal-content">
+                    <form action="{% url 'edit_booking' i.id %}" method="post">
+                        {% csrf_token %}
+                        <div class="modal-header">
+                            <h5 class="modal-title" id="editBookingLabel{{ i.id }}">
+                                <i class="fas fa-edit me-2"></i>Edit time slots
+                            </h5>
+                            <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+                        </div>
+                        <div class="modal-body">
+                            <p class="text-muted">
+                                Choose the slots you want for {{ i.selected_date }}. Your existing booking is
+                                {{ i.selected_slots|join:", " }}.
+                            </p>
+                            <div class="row g-2">
+                                {% for slot in i.editable_slot_options %}
+                                <div class="col-sm-6 col-md-4">
+                                    <label class="form-check border rounded p-3">
+                                        <input class="form-check-input me-2"
+                                            type="checkbox"
+                                            name="slots"
+                                            value="{{ slot }}"
+                                            {% if slot in i.selected_slots %}checked{% endif %}>
+                                        <span class="form-check-label">{{ slot }}</span>
+                                    </label>
+                                </div>
+                                {% endfor %}
+                            </div>
+                            <div class="alert alert-info mt-3 mb-0">
+                                Adding slots requires payment of the difference. Reducing slots requests a partial refund, available only at least 2 hours before the first slot. Changes apply to the same date and turf.
+                            </div>
+                        </div>
+                        <div class="modal-footer">
+                            <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Keep current booking</button>
+                            <button type="submit" class="btn btn-primary">
+                                <i class="fas fa-save me-2"></i>Save changes
+                            </button>
+                        </div>
+                    </form>
+                </div>
+            </div>
         </div>
-    </div>
+        {% endif %}
 
-    {% endif %}
+        {% endfor %}
 
-    <!-- Home Button -->
-    <div class="text-center my-5">
 
-        <a href="/"
-            class="btn btn-primary home-btn">
+        <!-- =========================
+             EMPTY STATE
+        ========================== -->
 
-            <i class="fa fa-home me-2"></i>
+        {% else %}
 
-            Back to Home
+        <div class="empty-state">
 
-        </a>
+            <div class="empty-state-icon">
 
-    </div>
+                <i class="fas fa-calendar-times"></i>
 
-</div>
+            </div>
 
-<!-- Scripts -->
-<script src="{% static 'js/jquery-b3.2.1.min.js' %}"></script>
+            <h4>No Bookings Yet!</h4>
 
-<script src="{% static 'styles/bootstrap4/popper.js' %}"></script>
+            <p>
+                You haven't made any turf bookings yet.
+                Start by selecting a turf and booking your preferred slot.
+            </p>
 
-<script src="{% static 'styles/bootstrap4/bootstrap.min.js' %}"></script>
+            <a href="/" class="btn home-btn">
 
-<script src="https://cdn.jsdelivr.net/npm/bootstrap@5.0.1/dist/js/bootstrap.bundle.min.js"></script>
+                <i class="fas fa-futbol me-2"></i>
+                Book a Turf
 
-<script>
-    // Auto close alerts after 5 seconds
-    document.addEventListener('DOMContentLoaded', function () {
+            </a>
 
-        setTimeout(function () {
+        </div>
 
-            let alerts = document.querySelectorAll('.alert');
+        {% endif %}
 
-            alerts.forEach(function (alert) {
 
-                let bsAlert = new bootstrap.Alert(alert);
+        <!-- =========================
+             BACK TO HOME
+        ========================== -->
 
-                bsAlert.close();
+        <div class="text-center mt-5">
 
-            });
+            <a href="/" class="btn home-btn">
 
-        }, 5000);
+                <i class="fas fa-home me-2"></i>
+                Back to Home
 
-    });
-</script>
+            </a>
+
+        </div>
+
+    </main>
+
+
+    <!-- =========================
+         FOOTER
+    ========================== -->
+
+    <footer class="footer">
+
+        <div class="container">
+
+            <p class="mb-0">
+                © 2023 The SK Sports Turf. All Rights Reserved.
+            </p>
+
+        </div>
+
+    </footer>
+
+
+    <!-- =========================
+         SCRIPTS
+    ========================== -->
+
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.1.3/dist/js/bootstrap.bundle.min.js">
+    </script>
+
+
+    <script>
+
+        // Auto close alerts after 5 seconds
+
+        document.addEventListener('DOMContentLoaded', function () {
+
+            setTimeout(function () {
+
+                let alerts = document.querySelectorAll('.alert');
+
+                alerts.forEach(function (alert) {
+
+                    if (typeof bootstrap !== 'undefined') {
+
+                        let bsAlert = new bootstrap.Alert(alert);
+
+                        bsAlert.close();
+
+                    }
+
+                });
+
+            }, 5000);
+
+        });
+
+    </script>
 
 </body>
+
 </html>

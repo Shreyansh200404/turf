@@ -16,7 +16,7 @@
   <main class="container px-3">
     <section class="card checkout-card">
       <div class="card-body p-4 p-md-5">
-        <h1 class="h3 text-center mb-2">Confirm your booking</h1>
+        <h1 class="h3 text-center mb-2">{% if is_booking_edit %}Confirm booking change{% else %}Confirm your booking{% endif %}</h1>
         <p class="text-center text-muted mb-4">Secure payment powered by Razorpay</p>
 
         {% if razorpay_mode == 'test' %}
@@ -45,13 +45,20 @@
           <dd class="col-sm-8">{{ details.selectedDate }}</dd>
           <dt class="col-sm-4">Slots</dt>
           <dd class="col-sm-8">{{ details.bookedSlots|join:", " }}</dd>
+          {% if is_booking_edit %}
+          <dt class="col-sm-4">Additional payment</dt>
+          <dd class="col-sm-8 fw-bold">₹{{ details.totalAmount }}</dd>
+          <dt class="col-sm-4">New booking total</dt>
+          <dd class="col-sm-8 fw-bold">₹{{ booking_new_total }}</dd>
+          {% else %}
           <dt class="col-sm-4">Total</dt>
           <dd class="col-sm-8 fw-bold">₹{{ details.totalAmount }}</dd>
+          {% endif %}
         </dl>
 
         {% if razorpay_order %}
         <button id="payNow" type="button" class="btn btn-pay btn-lg w-100">
-          Pay ₹{{ details.totalAmount }} securely
+          {% if is_booking_edit %}Pay additional ₹{{ details.totalAmount }}{% else %}Pay ₹{{ details.totalAmount }} securely{% endif %}
         </button>
         <p id="paymentStatus" class="small text-muted text-center mt-3 mb-0" role="status"></p>
 

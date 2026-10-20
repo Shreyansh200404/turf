@@ -41,6 +41,7 @@
                         <li class="nav-item"><a class="nav-link" href="/">Home</a></li>
                         <li class="nav-item"><a class="nav-link" href="book_now">Book Now</a></li>
                         <li class="nav-item"><a class="nav-link" href="orderHistory">Order History</a></li>
+                        <li class="nav-item"><a class="nav-link" href="{% url 'feedback' %}">Feedback</a></li>
                         {% if user.is_authenticated %}
                         <li class="nav-item"><a class="nav-link" href="logout">Logout</a></li>
                         {% else %}

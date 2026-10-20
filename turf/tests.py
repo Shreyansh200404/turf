@@ -11,7 +11,15 @@ from django.core import mail
 from django.test import TestCase, override_settings
 from django.urls import reverse
 
-from .models import Turf, TurfBooked, TurfSettings, turfBooking
+from .models import (
+    Feedback,
+    Turf,
+    TurfBooked,
+    TurfBookingPayment,
+    TurfSettings,
+    bookslot,
+    turfBooking,
+)
 from .views import (
     RazorpayError,
     RefundProcessingError,
@@ -749,3 +757,434 @@ class MultiTurfManagementTests(TestCase):
         response = self.client.get(reverse('owner_turfs'))
 
         self.assertRedirects(response, reverse('book_now'))
+
+
+class FeedbackTests(TestCase):
+    def setUp(self):
+        self.user = User.objects.create_user(
+            username='feedback-user',
+            email='feedback@example.com',
+            password='TestingPass!123',
+        )
+        self.staff = User.objects.create_user(
+            username='feedback-admin',
+            email='admin-feedback@example.com',
+            password='TestingPass!123',
+            is_staff=True,
+        )
+
+    def test_feedback_requires_login(self):
+        response = self.client.get(reverse('feedback'))
+
+        self.assertRedirects(
+            response,
+            f"{reverse('login')}?next={reverse('feedback')}",
+        )
+
+    def test_homepage_displays_feedback_to_anonymous_visitors(self):
+        Feedback.objects.create(
+            user=self.user,
+            rating=4,
+            message='The turf was clean and well maintained.',
+            admin_response='Thank you for visiting!',
+        )
+
+        response = self.client.get(reverse('index'))
+
+        self.assertEqual(response.status_code, 200)
+        self.assertContains(response, 'The turf was clean and well maintained.')
+        self.assertContains(response, 'Thank you for visiting!')
+        self.assertNotContains(response, self.user.username)
+
+    def test_user_can_submit_and_only_sees_their_feedback(self):
+        another_user = User.objects.create_user(
+            username='another-feedback-user',
+            email='another-feedback@example.com',
+            password='TestingPass!123',
+        )
+        Feedback.objects.create(
+            user=another_user,
+            rating=1,
+            message='Private feedback',
+        )
+        self.client.force_login(self.user)
+
+        response = self.client.post(
+            reverse('feedback'),
+            {'rating': '5', 'message': 'Great facilities!'},
+        )
+
+        self.assertRedirects(response, reverse('feedback'))
+        feedback_item = Feedback.objects.get(user=self.user)
+        self.assertEqual(feedback_item.rating, 5)
+        self.assertEqual(feedback_item.message, 'Great facilities!')
+        self.assertEqual(feedback_item.user_id, self.user.pk)
+
+        response = self.client.get(reverse('feedback'))
+        self.assertContains(response, 'Great facilities!')
+        self.assertNotContains(response, 'Private feedback')
+
+    def test_staff_can_update_feedback_status_and_reply(self):
+        feedback_item = Feedback.objects.create(
+            user=self.user,
+            rating=2,
+            message='The lights were not working.',
+        )
+        self.client.force_login(self.staff)
+
+        response = self.client.get(reverse('owner_feedback'))
+
+        self.assertEqual(response.status_code, 200)
+        self.assertContains(response, 'The lights were not working.')
+
+        response = self.client.post(
+            reverse('owner_feedback'),
+            {
+                'feedback_id': str(feedback_item.pk),
+                'status': Feedback.STATUS_RESOLVED,
+                'admin_response': 'Thank you. The lights have been fixed.',
+            },
+        )
+
+        self.assertRedirects(response, reverse('owner_feedback'))
+        feedback_item.refresh_from_db()
+        self.assertEqual(feedback_item.status, Feedback.STATUS_RESOLVED)
+        self.assertEqual(feedback_item.admin_response, 'Thank you. The lights have been fixed.')
+
+    def test_non_staff_cannot_manage_feedback(self):
+        self.client.force_login(self.user)
+
+        response = self.client.get(reverse('owner_feedback'))
+
+        self.assertRedirects(response, reverse('book_now'))
+
+    def test_invalid_feedback_rating_is_rejected(self):
+        self.client.force_login(self.user)
+
+        response = self.client.post(
+            reverse('feedback'),
+            {'rating': '6', 'message': 'Invalid rating'},
+        )
+
+        self.assertEqual(response.status_code, 200)
+        self.assertFalse(Feedback.objects.exists())
+
+
+@override_settings(TURF_TIME_ZONE='UTC')
+class BookingEditTests(TestCase):
+    NOW = datetime(2030, 1, 1, 4, 0, tzinfo=timezone.utc)
+
+    def setUp(self):
+        self.user = User.objects.create_user(
+            username='booking-editor',
+            email='booking-editor@example.com',
+            password='TestingPass!123',
+        )
+        self.client.force_login(self.user)
+        self.turf = Turf.objects.get(is_default=True)
+        bookslot.objects.get_or_create(
+            pk=1,
+            defaults={'week': json.dumps([[0] * 20 for _ in range(7)])},
+        )
+        self.booking = TurfBooked.objects.create(
+            name=self.user.username,
+            email=self.user.email,
+            turf=self.turf,
+            turf_name=self.turf.name,
+            amount=1000,
+            selected_date='2030-01-02',
+            current_date='2030-01-01',
+            booking_time='04:00:00',
+            slots='["6-7 am", "7-8 am"]',
+            payment_id='pay_bookingedit',
+            payment_method='upi',
+            paid=True,
+            is_dummy_payment=False,
+        )
+        self.payment = TurfBookingPayment.objects.create(
+            booking=self.booking,
+            payment_id=self.booking.payment_id,
+            amount=1000,
+        )
+
+    @patch('turf.views._current_time')
+    def test_order_history_shows_edit_slots_for_future_booking(self, now):
+        now.return_value = self.NOW
+
+        response = self.client.get(reverse('orderHistory'))
+
+        self.assertEqual(response.status_code, 200)
+        self.assertContains(response, 'Edit Time Slots')
+        self.assertContains(response, 'name="slots"')
+
+    @patch('turf.views._current_time')
+    @patch('turf.views.send_mail')
+    def test_user_can_change_slots_without_changing_the_price(self, send_mail, now):
+        now.return_value = self.NOW
+
+        response = self.client.post(
+            reverse('edit_booking', args=[self.booking.pk]),
+            {'slots': ['8-9 am', '9-10 am']},
+        )
+
+        self.assertRedirects(response, reverse('orderHistory'))
+        self.booking.refresh_from_db()
+        self.assertEqual(json.loads(self.booking.slots), ['8-9 am', '9-10 am'])
+        self.assertEqual(self.booking.amount, 1000)
+        send_mail.assert_called_once()
+        self.assertEqual(
+            send_mail.call_args.kwargs['recipient_list'],
+            [self.user.email],
+        )
+        self.assertEqual(
+            send_mail.call_args.kwargs['subject'],
+            'SK Sports Park booking updated',
+        )
+        self.assertIn('Updated time slots: 8-9 am, 9-10 am', send_mail.call_args.kwargs['message'])
+        self.assertTrue(
+            turfBooking.objects.filter(
+                time_slot='8-9 am',
+                days='2030-01-02',
+                isBooked=True,
+            ).exists()
+        )
+
+    @patch('turf.views._current_time')
+    @patch('turf.views.send_mail', side_effect=OSError('mail server unavailable'))
+    def test_booking_change_succeeds_and_reports_email_failure(
+        self,
+        send_mail,
+        now,
+    ):
+        now.return_value = self.NOW
+
+        response = self.client.post(
+            reverse('edit_booking', args=[self.booking.pk]),
+            {'slots': ['8-9 am', '9-10 am']},
+            follow=True,
+        )
+
+        self.booking.refresh_from_db()
+        self.assertEqual(json.loads(self.booking.slots), ['8-9 am', '9-10 am'])
+        self.assertContains(response, 'Booking updated, but we could not send the email notification.')
+        send_mail.assert_called_once()
+
+    @patch('turf.views._current_time')
+    @patch('turf.views._request_razorpay_refund')
+    def test_reducing_slot_count_refunds_difference_and_updates_booking(
+        self,
+        request_refund,
+        now,
+    ):
+        now.return_value = self.NOW
+        request_refund.return_value = ('rfnd_edit_123', 'processed')
+
+        response = self.client.post(
+            reverse('edit_booking', args=[self.booking.pk]),
+            {'slots': ['6-7 am']},
+        )
+
+        self.assertRedirects(response, reverse('orderHistory'))
+        self.booking.refresh_from_db()
+        self.payment.refresh_from_db()
+        self.assertEqual(json.loads(self.booking.slots), ['6-7 am'])
+        self.assertEqual(self.booking.amount, 500)
+        self.assertEqual(self.payment.refunded_amount, 500)
+        request_refund.assert_called_once_with(
+            self.payment.payment_id,
+            50000,
+            self.booking.pk,
+        )
+
+    @patch('turf.views._current_time')
+    @patch('turf.views._request_razorpay_refund')
+    def test_reduction_inside_two_hour_cutoff_is_rejected(
+        self,
+        request_refund,
+        now,
+    ):
+        now.return_value = datetime(2030, 1, 2, 4, 30, tzinfo=timezone.utc)
+
+        response = self.client.post(
+            reverse('edit_booking', args=[self.booking.pk]),
+            {'slots': ['6-7 am']},
+        )
+
+        self.assertRedirects(response, reverse('orderHistory'))
+        self.booking.refresh_from_db()
+        self.assertEqual(json.loads(self.booking.slots), ['6-7 am', '7-8 am'])
+        self.assertEqual(self.booking.amount, 1000)
+        request_refund.assert_not_called()
+
+    @patch('turf.views._current_time')
+    @patch('turf.views._request_razorpay_refund')
+    def test_slot_reduction_can_refund_across_multiple_payment_records(
+        self,
+        request_refund,
+        now,
+    ):
+        now.return_value = self.NOW
+        self.booking.amount = 1500
+        self.booking.slots = '["6-7 am", "7-8 am", "8-9 am"]'
+        self.booking.save(update_fields=['amount', 'slots'])
+        self.payment.amount = 500
+        self.payment.save(update_fields=['amount'])
+        first_additional = TurfBookingPayment.objects.create(
+            booking=self.booking,
+            payment_id='pay_edit_additional_1',
+            amount=500,
+        )
+        second_additional = TurfBookingPayment.objects.create(
+            booking=self.booking,
+            payment_id='pay_edit_additional_2',
+            amount=500,
+        )
+        request_refund.side_effect = [
+            ('rfnd_edit_2', 'processed'),
+            ('rfnd_edit_1', 'processed'),
+        ]
+
+        response = self.client.post(
+            reverse('edit_booking', args=[self.booking.pk]),
+            {'slots': ['6-7 am']},
+        )
+
+        self.assertRedirects(response, reverse('orderHistory'))
+        self.booking.refresh_from_db()
+        first_additional.refresh_from_db()
+        second_additional.refresh_from_db()
+        self.assertEqual(self.booking.amount, 500)
+        self.assertEqual(json.loads(self.booking.slots), ['6-7 am'])
+        self.assertEqual(first_additional.refunded_amount, 500)
+        self.assertEqual(second_additional.refunded_amount, 500)
+        self.assertEqual(request_refund.call_count, 2)
+
+    @patch('turf.views._current_time')
+    def test_edit_rejects_slots_booked_by_another_customer(self, now):
+        now.return_value = self.NOW
+        TurfBooked.objects.create(
+            name='another-user',
+            email='another-user@example.com',
+            turf=self.turf,
+            turf_name=self.turf.name,
+            amount=500,
+            selected_date=self.booking.selected_date,
+            current_date='2030-01-01',
+            booking_time='04:00:00',
+            slots='["9-10 am"]',
+            payment_id='pay_bookingedit_conflict',
+            paid=True,
+            is_dummy_payment=True,
+        )
+
+        response = self.client.post(
+            reverse('edit_booking', args=[self.booking.pk]),
+            {'slots': ['6-7 am', '9-10 am']},
+        )
+
+        self.assertRedirects(response, reverse('orderHistory'))
+        self.booking.refresh_from_db()
+        self.assertEqual(json.loads(self.booking.slots), ['6-7 am', '7-8 am'])
+
+    @patch('turf.views._current_time')
+    @patch('turf.views._request_razorpay_refund')
+    def test_cancellation_refunds_original_and_added_slot_payments(
+        self,
+        request_refund,
+        now,
+    ):
+        now.return_value = self.NOW
+        self.booking.amount = 1500
+        self.booking.slots = '["6-7 am", "7-8 am", "8-9 am"]'
+        self.booking.save(update_fields=['amount', 'slots'])
+        additional_payment = TurfBookingPayment.objects.create(
+            booking=self.booking,
+            payment_id='pay_edit_extra',
+            amount=500,
+        )
+        request_refund.side_effect = [
+            ('rfnd_original', 'processed'),
+            ('rfnd_added', 'processed'),
+        ]
+
+        response = self.client.post(
+            reverse('delete_booking', args=[self.booking.pk]),
+        )
+
+        self.assertRedirects(response, reverse('orderHistory'))
+        self.assertEqual(
+            request_refund.call_args_list,
+            [
+                ((self.booking.payment_id, 100000, self.booking.pk),),
+                ((additional_payment.payment_id, 50000, self.booking.pk),),
+            ],
+        )
+        self.payment.refresh_from_db()
+        additional_payment.refresh_from_db()
+        self.assertEqual(self.payment.refunded_amount, 1000)
+        self.assertEqual(additional_payment.refunded_amount, 500)
+
+    @override_settings(RAZOR_KEY_SECRET='test_secret')
+    @patch('turf.views._current_time')
+    @patch('turf.views._razorpay_request')
+    @patch('turf.views.send_mail')
+    def test_adding_slot_requires_and_confirms_incremental_payment(
+        self,
+        send_mail,
+        razorpay_request,
+        now,
+    ):
+        now.return_value = self.NOW
+        razorpay_request.side_effect = [
+            {
+                'id': 'order_bookingedit',
+                'amount': 50000,
+                'currency': 'INR',
+            },
+            {
+                'id': 'pay_edit_extra',
+                'order_id': 'order_bookingedit',
+                'amount': 50000,
+                'currency': 'INR',
+                'status': 'captured',
+                'method': 'upi',
+            },
+        ]
+        response = self.client.post(
+            reverse('edit_booking', args=[self.booking.pk]),
+            {'slots': ['6-7 am', '7-8 am', '8-9 am']},
+        )
+        self.assertEqual(response.status_code, 200)
+        self.assertContains(response, 'Pay additional ₹500')
+
+        payment_id = 'pay_edit_extra'
+        signature = hmac.new(
+            b'test_secret',
+            b'order_bookingedit|pay_edit_extra',
+            hashlib.sha256,
+        ).hexdigest()
+        response = self.client.post(
+            reverse('success'),
+            {
+                'razorpay_order_id': 'order_bookingedit',
+                'razorpay_payment_id': payment_id,
+                'razorpay_signature': signature,
+            },
+        )
+
+        self.assertRedirects(response, reverse('orderHistory'))
+        self.booking.refresh_from_db()
+        self.assertEqual(json.loads(self.booking.slots), ['6-7 am', '7-8 am', '8-9 am'])
+        self.assertEqual(self.booking.amount, 1500)
+        self.assertTrue(
+            TurfBookingPayment.objects.filter(
+                booking=self.booking,
+                payment_id=payment_id,
+                amount=500,
+            ).exists()
+        )
+        send_mail.assert_called_once()
+        self.assertIn(
+            'Updated time slots: 6-7 am, 7-8 am, 8-9 am',
+            send_mail.call_args.kwargs['message'],
+        )
