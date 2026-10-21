@@ -668,6 +668,8 @@ class MultiTurfManagementTests(TestCase):
         self.assertFalse(second_response.context['time_slots'][0]['booked'])
         self.assertEqual(second_response.context['slot_price'], 900)
         self.assertTrue(default_response.context['time_slots'][0]['booked'])
+        self.assertContains(default_response, 'badge bg-secondary">Booked</span>')
+        self.assertNotContains(default_response, 'badge bg-secondary">Expired</span>')
 
     @patch('turf.views._razorpay_request')
     def test_checkout_uses_selected_turf_price_and_keeps_turf_in_session(self, razorpay_request):
@@ -916,6 +918,33 @@ class BookingEditTests(TestCase):
         self.assertEqual(response.status_code, 200)
         self.assertContains(response, 'Edit Time Slots')
         self.assertContains(response, 'name="slots"')
+
+    @patch('turf.views._current_time')
+    def test_order_history_marks_slots_booked_by_another_booking(self, now):
+        now.return_value = self.NOW
+        TurfBooked.objects.create(
+            name='Another customer',
+            email='another-customer@example.com',
+            turf=self.turf,
+            turf_name=self.turf.name,
+            amount=500,
+            selected_date=self.booking.selected_date,
+            current_date='2030-01-01',
+            slots='["8-9 am"]',
+            payment_id='pay_another_booking',
+            paid=True,
+        )
+
+        response = self.client.get(reverse('orderHistory'))
+
+        self.assertEqual(response.status_code, 200)
+        self.assertIn('8-9 am', response.context['bookings'][0].unavailable_slots)
+        self.assertContains(response, '8-9 am')
+        self.assertContains(response, 'Booked')
+        self.assertRegex(
+            response.content.decode(),
+            r'<input[^>]*value="8-9 am"[^>]*disabled',
+        )
 
     @patch('turf.views._current_time')
     @patch('turf.views.send_mail')

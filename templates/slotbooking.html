@@ -220,8 +220,10 @@
                                             <small>₹{{ slot_price }}</small>
                                         </div>
                                         <div>
-                                            {% if slot.booked %}
+                                            {% if slot.expired %}
                                             <span class="badge bg-secondary">Expired</span>
+                                            {% elif slot.booked %}
+                                            <span class="badge bg-secondary">Booked</span>
                                             {% else %}
                                             <i class="far fa-clock"></i>
                                             {% endif %}
@@ -287,7 +289,7 @@
                 <div class="modal-body">
                     <h6>Booking Policy</h6>
                     <p>1. Bookings are confirmed only after full payment is made.</p>
-                    <p>2.Once slot is booked then not allow to cancel</p>
+                    <p>2. You may change the number of slots in your booking before the first booked slot starts. If you remove slots at least 2 hours before that start time, a refund for the removed slots will be requested based on the price paid per slot. Slot reductions are not allowed within 2 hours of the first slot.</p>
                     <p>3. <strong>Only 16 players are allowed per time slot.</strong> Additional players will not be permitted on the field.</p>
                     <p>4. No-shows will not be refunded.</p>
                     
@@ -465,7 +467,7 @@
                         // Update the icon to show it's booked
                         const iconContainer = slotElement.querySelector('div > div:last-child');
                         if (iconContainer) {
-                            iconContainer.innerHTML = '<span class="badge bg-secondary">Sold</span>';
+                            iconContainer.innerHTML = '<span class="badge bg-secondary">Booked</span>';
                         }
                         
                         // Remove event listeners by cloning and replacing

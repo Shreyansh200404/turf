@@ -998,14 +998,20 @@
                                             type="checkbox"
                                             name="slots"
                                             value="{{ slot }}"
+                                            {% if slot in i.unavailable_slots and slot not in i.selected_slots %}disabled{% endif %}
                                             {% if slot in i.selected_slots %}checked{% endif %}>
-                                        <span class="form-check-label">{{ slot }}</span>
+                                        <span class="form-check-label">
+                                            {{ slot }}
+                                            {% if slot in i.unavailable_slots and slot not in i.selected_slots %}
+                                            <span class="badge bg-secondary ms-1">Booked</span>
+                                            {% endif %}
+                                        </span>
                                     </label>
                                 </div>
                                 {% endfor %}
                             </div>
                             <div class="alert alert-info mt-3 mb-0">
-                                Adding slots requires payment of the difference. Reducing slots requests a partial refund, available only at least 2 hours before the first slot. Changes apply to the same date and turf.
+                                Adding slots requires payment of the difference. If you remove slots at least 2 hours before the first slot starts, a refund for the removed slots will be requested based on the price paid per slot. Reductions are not allowed within 2 hours. Changes apply to the same date and turf.
                             </div>
                         </div>
                         <div class="modal-footer">

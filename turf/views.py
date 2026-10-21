@@ -1950,6 +1950,17 @@ def orderHistory(request):
             slot for slot in sorted(SLOT_IDS, key=SLOT_IDS.get)
             if _slot_start_datetime(booking.selected_date, slot) > now
         ] if booking.can_edit else []
+        booking.unavailable_slots = (
+            _booking_slot_conflicts(
+                booking.turf,
+                booking.selected_date,
+                booking.editable_slot_options,
+                booking.pk,
+                booking.selected_slots,
+            )
+            if booking.can_edit
+            else []
+        )
         booking.refund_eligible = bool(
             booking_start
             and booking_start - now >= CANCELLATION_REFUND_CUTOFF
