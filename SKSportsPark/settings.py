@@ -12,6 +12,7 @@ https://docs.djangoproject.com/en/3.2/ref/settings/
 
 from pathlib import Path
 import os
+from turtle import st
 #import dj_database_url
 # Build paths inside the project like this: BASE_DIR / 'subdir'.
 BASE_DIR = Path(__file__).resolve().parent.parent
@@ -28,7 +29,9 @@ DEBUG = False
 
 #ALLOWED_HOSTS = ['*']
 
-ALLOWED_HOSTS = ['.azurewebsites.net', 'localhost', '127.0.0.1']
+#ALLOWED_HOSTS = ['.azurewebsites.net', 'localhost', '127.0.0.1', '10.16.16.241  ']
+
+ALLOWED_HOSTS = ['*']
 
 # Application definition
 

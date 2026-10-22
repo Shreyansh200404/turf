@@ -8,7 +8,7 @@ from unittest.mock import patch
 
 from django.contrib.auth.models import User
 from django.core import mail
-from django.test import TestCase, override_settings
+from django.test import Client, TestCase, override_settings
 from django.urls import reverse
 
 from .models import (
@@ -16,6 +16,7 @@ from .models import (
     Turf,
     TurfBooked,
     TurfBookingPayment,
+    TurfSlotReservation,
     TurfSettings,
     bookslot,
     turfBooking,
@@ -226,6 +227,95 @@ class RazorpayBookingTests(TestCase):
         self.assertContains(response, '6-7 am')
         self.assertContains(response, 'Payment unavailable')
         razorpay_request.assert_called_once()
+        self.assertFalse(TurfSlotReservation.objects.exists())
+
+    @patch('turf.views._razorpay_request')
+    def test_slot_is_reserved_for_first_checkout_and_rejected_for_another_user(
+        self,
+        razorpay_request,
+    ):
+        turf = Turf.objects.get(is_default=True)
+        payment_id = 'pay_reservation123'
+        razorpay_request.side_effect = [
+            {
+                'id': 'order_reservation123',
+                'amount': 50000,
+                'currency': 'INR',
+            },
+            {
+                'id': payment_id,
+                'order_id': 'order_reservation123',
+                'amount': 50000,
+                'currency': 'INR',
+                'status': 'captured',
+                'method': 'upi',
+            },
+        ]
+        first_response = self.client.post(
+            reverse('turfBilling'),
+            {
+                'selected_date': '2030-01-01',
+                'turf_id': str(turf.pk),
+                'slots': ['6-7 am'],
+            },
+        )
+        self.assertEqual(first_response.status_code, 200)
+
+        reservation = TurfSlotReservation.objects.get(
+            turf=turf,
+            selected_date='2030-01-01',
+            slot='6-7 am',
+        )
+        self.assertEqual(
+            self.client.session['pending_razorpay_booking']['reservation_id'],
+            reservation.reservation_id,
+        )
+
+        second_user = User.objects.create_user(
+            username='second-booking-user',
+            email='second-booking-user@example.com',
+            password='TestingPass!123',
+        )
+        second_client = Client()
+        second_client.force_login(second_user)
+        second_response = second_client.post(
+            reverse('turfBilling'),
+            {
+                'selected_date': '2030-01-01',
+                'turf_id': str(turf.pk),
+                'slots': ['6-7 am'],
+            },
+        )
+
+        self.assertEqual(second_response.status_code, 302)
+        self.assertEqual(
+            second_response.url,
+            f"{reverse('slot_details')}?date=2030-01-01&turf_id={turf.pk}",
+        )
+        availability_response = second_client.get(second_response.url)
+        self.assertContains(
+            availability_response,
+            'These slots are no longer available',
+        )
+
+        signature = hmac.new(
+            b'test_secret',
+            b'order_reservation123|pay_reservation123',
+            hashlib.sha256,
+        ).hexdigest()
+        confirmation_response = self.client.post(
+            reverse('success'),
+            {
+                'razorpay_order_id': 'order_reservation123',
+                'razorpay_payment_id': payment_id,
+                'razorpay_signature': signature,
+            },
+        )
+
+        self.assertEqual(confirmation_response.status_code, 200)
+        self.assertTrue(TurfBooked.objects.filter(payment_id=payment_id).exists())
+        self.assertFalse(TurfSlotReservation.objects.exists())
+        self.assertEqual(razorpay_request.call_count, 2)
 
     @patch('turf.views.urlopen', side_effect=HTTPError(
         'https://api.razorpay.com/v1/orders',

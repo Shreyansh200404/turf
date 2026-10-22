@@ -45,6 +45,26 @@ class TurfBooked(models.Model):
     refund_status = models.CharField(max_length=20, default="not_applicable")
 
 
+class TurfSlotReservation(models.Model):
+    turf = models.ForeignKey(
+        'Turf',
+        on_delete=models.CASCADE,
+        related_name='slot_reservations',
+    )
+    selected_date = models.CharField(max_length=10)
+    slot = models.CharField(max_length=12)
+    reservation_id = models.CharField(max_length=32, db_index=True)
+    expires_at = models.DateTimeField(db_index=True)
+
+    class Meta:
+        constraints = [
+            models.UniqueConstraint(
+                fields=('turf', 'selected_date', 'slot'),
+                name='unique_turf_date_slot_reservation',
+            ),
+        ]
+
+
 class TurfBookingPayment(models.Model):
     booking = models.ForeignKey(
         TurfBooked,

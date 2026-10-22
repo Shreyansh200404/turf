@@ -19,7 +19,7 @@ import re
 import secrets
 import time
 import uuid
-from django.db import DatabaseError, transaction
+from django.db import DatabaseError, IntegrityError, transaction
 from django.db.models import F, Q, Sum, Count
 
 from django.template.loader import render_to_string
@@ -48,6 +48,7 @@ PASSWORD_RESET_OTP_SESSION_KEY = 'password_reset_otp'
 PASSWORD_RESET_OTP_TIMEOUT = 10 * 60
 PASSWORD_RESET_OTP_MAX_ATTEMPTS = 5
 CANCELLATION_REFUND_CUTOFF = timedelta(hours=2)
+SLOT_RESERVATION_TIMEOUT = timedelta(minutes=10)
 
 SLOT_START_HOURS = {
     '6-7 am': 6, '7-8 am': 7, '8-9 am': 8, '9-10 am': 9,
@@ -202,7 +203,14 @@ def _update_default_turf_slot_records(turf, selected_date, old_slots, new_slots)
         record.save(update_fields=['isBooked', 'days'])
 
 
-def _booking_slot_conflicts(turf, selected_date, slots, exclude_booking_id, existing_slots):
+def _booking_slot_conflicts(
+    turf,
+    selected_date,
+    slots,
+    exclude_booking_id,
+    existing_slots,
+    exclude_reservation_id=None,
+):
     bookings = TurfBooked.objects.filter(
         turf=turf,
         selected_date=selected_date,
@@ -221,7 +229,62 @@ def _booking_slot_conflicts(turf, selected_date, slots, exclude_booking_id, exis
         )
         legacy_occupied_slots.difference_update(set(existing_slots) - occupied_slots)
         occupied_slots.update(legacy_occupied_slots)
+    reservations = TurfSlotReservation.objects.filter(
+        turf=turf,
+        selected_date=selected_date,
+        expires_at__gt=_current_time(),
+    )
+    if exclude_reservation_id:
+        reservations = reservations.exclude(reservation_id=exclude_reservation_id)
+    occupied_slots.update(reservations.values_list('slot', flat=True))
     return sorted(set(slots) & occupied_slots)
+
+
+def _reserve_booking_slots(turf, selected_date, slots):
+    reservation_id = uuid.uuid4().hex
+    now = _current_time()
+    try:
+        with transaction.atomic():
+            Turf.objects.select_for_update().get(pk=turf.pk, is_active=True)
+            TurfSlotReservation.objects.filter(
+                turf=turf,
+                selected_date=selected_date,
+                slot__in=slots,
+                expires_at__lte=now,
+            ).delete()
+            conflicts = _booking_slot_conflicts(
+                turf,
+                selected_date,
+                slots,
+                None,
+                [],
+            )
+            if conflicts:
+                raise BookingSlotsUnavailable(conflicts)
+
+            TurfSlotReservation.objects.bulk_create([
+                TurfSlotReservation(
+                    turf=turf,
+                    selected_date=selected_date,
+                    slot=slot,
+                    reservation_id=reservation_id,
+                    expires_at=now + SLOT_RESERVATION_TIMEOUT,
+                )
+                for slot in slots
+            ])
+    except IntegrityError:
+        logger.info(
+            'Concurrent reservation conflict for turf %s on %s',
+            turf.pk,
+            selected_date,
+        )
+        raise BookingSlotsUnavailable(slots)
+    return reservation_id
+
+
+def _release_slot_reservation(reservation_id):
+    if reservation_id:
+        TurfSlotReservation.objects.filter(reservation_id=reservation_id).delete()
 
 
 def _record_booking_payment_if_present(booking_id, **payment_values):
@@ -1264,7 +1327,16 @@ def slot_details(request):
                             slot_booking.isBooked = True
                             slot_booking.days = selectedDate
                             slot_booking.save()
-        
+
+        reserved_slots = TurfSlotReservation.objects.filter(
+            turf=turf,
+            selected_date=selectedDate,
+            expires_at__gt=_current_time(),
+        ).values_list('slot', flat=True)
+        for slot in reserved_slots:
+            if slot not in booked_slots:
+                booked_slots.append(slot)
+
         # 2. Also check turfBooking model for any additional booked slots
         if turf.is_default:
             booked_slot_records = turfBooking.objects.filter(days=selectedDate, isBooked=True)
@@ -1385,29 +1457,6 @@ def turfBilling(request):
         return redirect('book_now')
 
     slots.sort(key=SLOT_IDS.get)
-    already_booked = set()
-    for booking in TurfBooked.objects.filter(
-        turf=turf,
-        selected_date=selected_date,
-        paid=True,
-        cancelled=False,
-    ):
-        already_booked.update(_booking_slots(booking))
-    if turf.is_default:
-        already_booked.update(
-            turfBooking.objects.filter(days=selected_date, isBooked=True)
-            .values_list('time_slot', flat=True)
-        )
-    conflicts = sorted(set(slots) & already_booked)
-    if conflicts:
-        messages.error(
-            request,
-            f'These slots are no longer available: {", ".join(conflicts)}.',
-        )
-        return redirect(
-            f"{reverse('slot_details')}?date={selected_date}&turf_id={turf.pk}"
-        )
-
     slot_price = turf.slot_price
     if slot_price <= 0:
         messages.error(request, 'The booking price is currently invalid. Please contact the venue.')
@@ -1427,6 +1476,17 @@ def turfBilling(request):
     order_receipt = f'turf-{uuid.uuid4().hex[:24]}'
 
     try:
+        reservation_id = _reserve_booking_slots(turf, selected_date, slots)
+    except BookingSlotsUnavailable as exc:
+        messages.error(
+            request,
+            f'These slots are no longer available: {", ".join(exc.slots)}.',
+        )
+        return redirect(
+            f"{reverse('slot_details')}?date={selected_date}&turf_id={turf.pk}"
+        )
+
+    try:
         order = _razorpay_request('POST', 'orders', {
             'amount': amount * 100,
             'currency': 'INR',
@@ -1440,6 +1500,7 @@ def turfBilling(request):
             },
         })
     except RazorpayError as exc:
+        _release_slot_reservation(reservation_id)
         return _render_checkout(request, details, None, error=str(exc))
 
     order_id = order.get('id')
@@ -1450,6 +1511,7 @@ def turfBilling(request):
         or order.get('currency') != 'INR'
     ):
         logger.error('Razorpay returned an invalid order response for user %s', request.user.pk)
+        _release_slot_reservation(reservation_id)
         return _render_checkout(
             request,
             details,
@@ -1467,6 +1529,7 @@ def turfBilling(request):
         'current_date': details['currentDate'],
         'booking_time': booking_time,
         'slots': slots,
+        'reservation_id': reservation_id,
     }
     request.session.pop('pending_razorpay_booking_edit', None)
     return _render_checkout(request, details, order)
@@ -1694,7 +1757,9 @@ def success(request):
         request.session.pop('pending_razorpay_booking_edit', None)
         return redirect('orderHistory')
 
+    reservation_id = intent.get('reservation_id')
     if TurfBooked.objects.filter(payment_id=payment_id, paid=True).exists():
+        _release_slot_reservation(reservation_id)
         request.session.pop('pending_razorpay_booking', None)
         existing = TurfBooked.objects.get(payment_id=payment_id, paid=True)
         return render(request, 'success.html', {
@@ -1724,6 +1789,19 @@ def success(request):
         with transaction.atomic():
             Turf.objects.select_for_update().get(pk=turf.pk)
             initialize_time_slots()
+            if reservation_id:
+                reserved_slots = set(
+                    TurfSlotReservation.objects.select_for_update().filter(
+                        turf=turf,
+                        selected_date=selected_date,
+                        reservation_id=reservation_id,
+                        expires_at__gt=_current_time(),
+                    ).values_list('slot', flat=True)
+                )
+                missing_slots = set(booked_slots) - reserved_slots
+                if missing_slots:
+                    raise BookingSlotsUnavailable(sorted(missing_slots))
+
             list(
                 turfBooking.objects.filter(time_slot__in=booked_slots)
                 .order_by('id')
@@ -1746,6 +1824,16 @@ def success(request):
                         isBooked=True,
                     ).values_list('time_slot', flat=True)
                 )
+            active_reservations = TurfSlotReservation.objects.select_for_update().filter(
+                turf=turf,
+                selected_date=selected_date,
+                expires_at__gt=_current_time(),
+            )
+            if reservation_id:
+                active_reservations = active_reservations.exclude(
+                    reservation_id=reservation_id,
+                )
+            occupied_slots.update(active_reservations.values_list('slot', flat=True))
             conflicts = sorted(set(booked_slots) & occupied_slots)
             if conflicts:
                 raise BookingSlotsUnavailable(conflicts)
@@ -1766,6 +1854,7 @@ def success(request):
                 paid=True,
                 is_dummy_payment=False,
             )
+            _release_slot_reservation(reservation_id)
             TurfBookingPayment.objects.create(
                 booking=booking,
                 payment_id=payment_id,
@@ -1795,6 +1884,7 @@ def success(request):
             refund_id = ''
             refund_status = 'review_required'
 
+        _release_slot_reservation(reservation_id)
         cancelled_booking = TurfBooked.objects.create(
             name=request.user.username,
             email=request.user.email,
@@ -1853,6 +1943,7 @@ def success(request):
         return redirect(f"{reverse('slot_details')}?date={selected_date}")
     except (DatabaseError, ValueError, KeyError, IndexError, TypeError):
         logger.exception('Could not save verified booking for Razorpay payment %s', payment_id)
+        _release_slot_reservation(reservation_id)
         try:
             refund_id, refund_status = _request_razorpay_refund(
                 payment_id,
@@ -2426,7 +2517,7 @@ def check_slot_status(request):
     """
     API endpoint to check slot availability in real-time
     Returns a JSON response with booked slots for a specific date
-    Only considers slots from paid/confirmed bookings
+    Includes confirmed bookings and active checkout reservations
     """
     selected_date = request.GET.get('date')
     
@@ -2466,6 +2557,15 @@ def check_slot_status(request):
         for record in booked_slot_records:
             if record.time_slot not in booked_slots:
                 booked_slots.append(record.time_slot)
+
+    reserved_slots = TurfSlotReservation.objects.filter(
+        turf=turf,
+        selected_date=selected_date,
+        expires_at__gt=_current_time(),
+    ).values_list('slot', flat=True)
+    for slot in reserved_slots:
+        if slot not in booked_slots:
+            booked_slots.append(slot)
 
     return JsonResponse({
         'date': selected_date,
