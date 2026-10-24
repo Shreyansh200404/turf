@@ -25,14 +25,22 @@ BASE_DIR = Path(__file__).resolve().parent.parent
 SECRET_KEY = 'django-insecure-b(s=(2qs9qhq%1@jte%yy8)#%mja&cap0_1l02ib6ks)x1l(9z'
 
 # SECURITY WARNING: don't run with debug turned on in production!
-DEBUG = False
+
 
 #ALLOWED_HOSTS = ['*']
 
 #ALLOWED_HOSTS = ['.azurewebsites.net', 'localhost', '127.0.0.1', '10.16.16.241  ']
 
+
+DEBUG = False
+
 ALLOWED_HOSTS = ['*']
 
+CSRF_TRUSTED_ORIGINS = [
+    'https://skturfbooking.azurewebsites.net',
+]
+
+SECURE_PROXY_SSL_HEADER = ('HTTP_X_FORWARDED_PROTO', 'https')
 # Application definition
 
 INSTALLED_APPS = [
@@ -144,6 +152,7 @@ USE_TZ = True
 # Static files (CSS, JavaScript, Images)
 # https://docs.djangoproject.com/en/4.0/howto/static-files/
 
+
 STATIC_URL = '/static/'
 
 STATICFILES_DIRS = [
@@ -151,6 +160,19 @@ STATICFILES_DIRS = [
 ]
 
 STATIC_ROOT = os.path.join(BASE_DIR, 'staticfiles')
+
+STORAGES = {
+    "staticfiles": {
+        "BACKEND": "whitenoise.storage.CompressedStaticFilesStorage",
+    },
+}
+
+MEDIA_URL = '/media/'
+MEDIA_ROOT = os.path.join(BASE_DIR, 'media')
+
+
+
+
 
 # Use simpler storage for development
 STATICFILES_STORAGE = 'whitenoise.storage.CompressedStaticFilesStorage'
