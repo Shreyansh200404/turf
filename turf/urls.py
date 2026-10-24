@@ -1,4 +1,7 @@
 from django.urls import path, include
+
+from SKSportsPark import settings
+import static
 from . import views
 from django.contrib.auth import views as auth_views
 
@@ -67,3 +70,7 @@ urlpatterns = [
 
     path('delete_booking/<int:id>/', views.delete_booking, name='delete_booking'),
 ]
+
+
+if settings.DEBUG:
+    urlpatterns += static(settings.MEDIA_URL, document_root=settings.MEDIA_ROOT)
