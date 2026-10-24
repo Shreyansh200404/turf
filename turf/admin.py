@@ -1,4 +1,5 @@
 from django.contrib import admin
+from django.utils.html import format_html
 
 # Register your models here.
 
@@ -18,10 +19,16 @@ admin.site.register(turfBooking)
 admin.site.register(bookslot)
 @admin.register(Turf)
 class TurfAdmin(admin.ModelAdmin):
-    list_display = ('name', 'slot_price', 'is_active', 'is_default')
+    list_display = ('name', 'image_preview', 'slot_price', 'is_active', 'is_default')
     list_filter = ('is_active',)
     search_fields = ('name', 'address')
-    readonly_fields = ('is_default',)
+    readonly_fields = ('is_default', 'image_preview')
+
+    @admin.display(description='Image')
+    def image_preview(self, obj):
+        if not obj or not obj.image:
+            return 'No image'
+        return format_html('<img src="{}" alt="{}" style="max-height: 60px;">', obj.image.url, obj.name)
 
     def has_delete_permission(self, request, obj=None):
         return False

@@ -516,7 +516,7 @@
                     <div class="turf-image-wrapper">
 
                         <img
-                            src="{% static 'images/new_turf.jpeg' %}"
+                            src="{% if turf_option.image %}{{ turf_option.image.url }}{% else %}{% static 'images/new_turf.jpeg' %}{% endif %}"
                             alt="{{ turf_option.name }}"
                             class="turf-image"
                         >

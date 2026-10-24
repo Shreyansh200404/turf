@@ -87,6 +87,7 @@ class TurfBookingPayment(models.Model):
 
 class Turf(models.Model):
     name = models.CharField(max_length=200)
+    image = models.ImageField(upload_to='turfs/', blank=True)
     slot_price = models.PositiveIntegerField(default=500)
     description = models.TextField(blank=True)
     address = models.TextField(blank=True)

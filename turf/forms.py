@@ -10,6 +10,7 @@ class TurfForm(forms.ModelForm):
         model = Turf
         fields = (
             'name',
+            'image',
             'slot_price',
             'description',
             'address',

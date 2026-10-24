@@ -984,7 +984,7 @@ def owner_turfs(request):
 def owner_turf_create(request):
     if not request.user.is_staff:
         return redirect('book_now')
-    form = TurfForm(request.POST or None)
+    form = TurfForm(request.POST or None, request.FILES or None)
     if request.method == 'POST' and form.is_valid():
         form.save()
         messages.success(request, 'Turf added successfully.')
@@ -997,7 +997,7 @@ def owner_turf_edit(request, turf_id):
     if not request.user.is_staff:
         return redirect('book_now')
     turf = get_object_or_404(Turf, pk=turf_id)
-    form = TurfForm(request.POST or None, instance=turf)
+    form = TurfForm(request.POST or None, request.FILES or None, instance=turf)
     if request.method == 'POST' and form.is_valid():
         form.save()
         messages.success(request, 'Turf updated successfully.')

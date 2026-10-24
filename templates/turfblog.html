@@ -183,7 +183,7 @@
     <div class="container py-5 main-container">
         <div class="row">
             <div class="col-md-5 mb-4">
-                <img src="{% static 'images/new_turf.jpeg' %}" alt="Turf Image" class="img-fluid turf-image">
+                <img src="{% if turf.image %}{{ turf.image.url }}{% else %}{% static 'images/new_turf.jpeg' %}{% endif %}" alt="{{ turf.name }}" class="img-fluid turf-image">
                 
                 <div class="mt-3">
                     <h2>{{ turf.name }}</h2>

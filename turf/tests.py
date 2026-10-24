@@ -1,15 +1,19 @@
 import json
 import hashlib
 import hmac
+import tempfile
 import re
+from io import BytesIO
 from datetime import datetime, timezone
 from urllib.error import HTTPError
 from unittest.mock import patch
 
 from django.contrib.auth.models import User
 from django.core import mail
+from django.core.files.uploadedfile import SimpleUploadedFile
 from django.test import Client, TestCase, override_settings
 from django.urls import reverse
+from PIL import Image
 
 from .models import (
     Feedback,
@@ -729,6 +733,135 @@ class MultiTurfManagementTests(TestCase):
         self.assertFalse(turf.is_active)
         self.assertEqual(booking.turf_id, turf.pk)
         self.assertEqual(booking.turf_name, 'Training Ground East')
+
+    def test_owner_can_upload_and_update_turf_image(self):
+        self.client.force_login(self.owner)
+
+        with tempfile.TemporaryDirectory() as media_root:
+            with override_settings(MEDIA_ROOT=media_root):
+                image_data = BytesIO()
+                Image.new('RGB', (2, 2), color='green').save(image_data, format='PNG')
+                image = SimpleUploadedFile(
+                    'training-ground.png',
+                    image_data.getvalue(),
+                    content_type='image/png',
+                )
+                response = self.client.post(
+                    reverse('owner_turf_create'),
+                    {
+                        'name': 'Photo Turf',
+                        'slot_price': '750',
+                        'description': 'A turf with a photo',
+                        'address': 'North entrance',
+                        'contact_phone': '',
+                        'contact_email': '',
+                        'is_active': 'on',
+                        'image': image,
+                    },
+                )
+
+                self.assertRedirects(response, reverse('owner_turfs'))
+                turf = Turf.objects.get(name='Photo Turf')
+                self.assertTrue(turf.image.storage.exists(turf.image.name))
+
+                response = self.client.get(reverse('book_now'))
+                self.assertContains(response, turf.image.url)
+                response = self.client.get(
+                    reverse('turf_details'),
+                    {'turf_id': turf.pk},
+                )
+                self.assertContains(response, turf.image.url)
+
+                updated_image_data = BytesIO()
+                Image.new('RGB', (2, 2), color='blue').save(
+                    updated_image_data,
+                    format='PNG',
+                )
+                updated_image = SimpleUploadedFile(
+                    'updated-training-ground.png',
+                    updated_image_data.getvalue(),
+                    content_type='image/png',
+                )
+                response = self.client.post(
+                    reverse('owner_turf_edit', args=[turf.pk]),
+                    {
+                        'name': turf.name,
+                        'slot_price': '750',
+                        'description': turf.description,
+                        'address': turf.address,
+                        'contact_phone': '',
+                        'contact_email': '',
+                        'is_active': 'on',
+                        'image': updated_image,
+                    },
+                )
+
+                self.assertRedirects(response, reverse('owner_turfs'))
+                turf.refresh_from_db()
+                self.assertIn('updated-training-ground', turf.image.name)
+
+    def test_django_admin_can_create_and_update_turf_image(self):
+        admin_user = User.objects.create_superuser(
+            username='turf-admin',
+            email='admin@example.com',
+            password='TestingPass!123',
+        )
+        self.client.force_login(admin_user)
+
+        with tempfile.TemporaryDirectory() as media_root:
+            with override_settings(MEDIA_ROOT=media_root):
+                image_data = BytesIO()
+                Image.new('RGB', (2, 2), color='green').save(image_data, format='PNG')
+                response = self.client.post(
+                    reverse('admin:turf_turf_add'),
+                    {
+                        'name': 'Admin Photo Turf',
+                        'image': SimpleUploadedFile(
+                            'admin-turf.png',
+                            image_data.getvalue(),
+                            content_type='image/png',
+                        ),
+                        'slot_price': '700',
+                        'description': 'Created in Django admin',
+                        'address': 'West entrance',
+                        'contact_phone': '',
+                        'contact_email': '',
+                        'is_active': 'on',
+                    },
+                )
+
+                self.assertEqual(response.status_code, 302)
+                turf = Turf.objects.get(name='Admin Photo Turf')
+                first_image_name = turf.image.name
+                self.assertTrue(turf.image.storage.exists(first_image_name))
+
+                updated_image_data = BytesIO()
+                Image.new('RGB', (2, 2), color='blue').save(
+                    updated_image_data,
+                    format='PNG',
+                )
+                response = self.client.post(
+                    reverse('admin:turf_turf_change', args=[turf.pk]),
+                    {
+                        'name': 'Admin Photo Turf Updated',
+                        'image': SimpleUploadedFile(
+                            'updated-admin-turf.png',
+                            updated_image_data.getvalue(),
+                            content_type='image/png',
+                        ),
+                        'slot_price': '800',
+                        'description': 'Updated in Django admin',
+                        'address': 'West entrance',
+                        'contact_phone': '',
+                        'contact_email': '',
+                        'is_active': 'on',
+                    },
+                )
+
+                self.assertEqual(response.status_code, 302)
+                turf.refresh_from_db()
+                self.assertEqual(turf.name, 'Admin Photo Turf Updated')
+                self.assertIn('updated-admin-turf', turf.image.name)
 
     def test_customer_can_see_availability_independently_per_turf(self):
         self.client.force_login(self.user)

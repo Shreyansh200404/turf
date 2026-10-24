@@ -782,11 +782,17 @@
 
                                     <div class="turf-name-wrapper">
 
-                                        <div class="turf-icon">
-
-                                            <i class="fas fa-futbol"></i>
-
-                                        </div>
+                                        {% if turf.image %}
+                                            <img
+                                                src="{{ turf.image.url }}"
+                                                alt="{{ turf.name }}"
+                                                style="width: 48px; height: 48px; object-fit: cover; border-radius: 10px;"
+                                            >
+                                        {% else %}
+                                            <div class="turf-icon">
+                                                <i class="fas fa-futbol"></i>
+                                            </div>
+                                        {% endif %}
 
 
                                         <div>
