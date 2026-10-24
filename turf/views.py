@@ -30,6 +30,7 @@ from django.template.defaulttags import register
 from django.utils.encoding import force_bytes, force_str
 from django.utils.http import urlsafe_base64_decode, urlsafe_base64_encode
 from django.utils import timezone as django_timezone
+from django.views.decorators.cache import never_cache
 from django.views.decorators.http import require_GET, require_POST
 from urllib.error import HTTPError, URLError
 from urllib.request import Request, urlopen
@@ -111,6 +112,32 @@ def _active_turf(turf_id=None):
 
 def _current_time():
     return django_timezone.now()
+
+
+def _business_now():
+    return django_timezone.localtime(
+        _current_time(),
+        ZoneInfo(getattr(settings, 'TURF_TIME_ZONE', settings.TIME_ZONE)),
+    )
+
+
+def _business_date():
+    return _business_now().date()
+
+
+def _slot_is_expired(selected_date, slot, current_time):
+    selected_date_obj = date.fromisoformat(selected_date)
+    if selected_date_obj < current_time.date():
+        return True
+    if selected_date_obj > current_time.date():
+        return False
+
+    slot_hour = SLOT_START_HOURS[slot]
+    if slot_hour == 0:
+        return False
+    if slot_hour == current_time.hour:
+        return current_time.minute > 15
+    return slot_hour < current_time.hour
 
 
 def _booking_slots(booking):
@@ -695,8 +722,9 @@ def turf_details(request):
     # Clean up stale pending bookings
     clean_pending_bookings()
     
-    currentDate = date.today().strftime("%Y-%m-%d")
-    endDate = (date.today() + timedelta(days=6)).strftime("%Y-%m-%d")
+    booking_date = _business_date()
+    currentDate = booking_date.strftime("%Y-%m-%d")
+    endDate = (booking_date + timedelta(days=6)).strftime("%Y-%m-%d")
     turfs = Turf.objects.filter(is_active=True).order_by('name', 'pk')
     requested_turf = request.GET.get('turf_id')
     turf = _active_turf(requested_turf)
@@ -864,10 +892,11 @@ def owner_dashboard(request):
     recent_bookings = TurfBooked.objects.order_by('-id')[:10]
     
     # Get analytics data
-    today = date.today().strftime("%Y-%m-%d")
-    week_start = (date.today() - timedelta(days=date.today().weekday())).strftime("%Y-%m-%d")
-    month_start = date.today().replace(day=1).strftime("%Y-%m-%d")
-    year_start = date.today().replace(month=1, day=1).strftime("%Y-%m-%d")
+    today_date = _business_date()
+    today = today_date.strftime("%Y-%m-%d")
+    week_start = (today_date - timedelta(days=today_date.weekday())).strftime("%Y-%m-%d")
+    month_start = today_date.replace(day=1).strftime("%Y-%m-%d")
+    year_start = today_date.replace(month=1, day=1).strftime("%Y-%m-%d")
     
     # Daily income
     daily_bookings = TurfBooked.objects.filter(
@@ -1034,7 +1063,7 @@ def owner_analytics(request):
         start_date = datetime.strptime(start_date_str, '%Y-%m-%d').date()
         end_date = datetime.strptime(end_date_str, '%Y-%m-%d').date()
     else:
-        end_date = date.today()
+        end_date = _business_date()
         start_date = end_date - timedelta(days=6)
     
     # Generate date range
@@ -1267,8 +1296,8 @@ def slot_details(request):
     clean_pending_bookings()
     
     if request.method == 'POST' or request.GET.get('date'):
-        currentDate = date.today().strftime("%Y-%m-%d")
-        currentTime = datetime.now()  # Get current time
+        currentTime = _business_now()
+        currentDate = currentTime.date().strftime("%Y-%m-%d")
         selectedDate = request.POST.get('date') or request.GET.get('date', '')
         requested_turf = request.POST.get('turf_id') or request.GET.get('turf_id')
         turf = _active_turf(requested_turf)
@@ -1370,40 +1399,17 @@ def slot_details(request):
         ]
         
         # Handle expired and booked slots
-        current_hour = currentTime.hour
-        current_minute = currentTime.minute
-        
-        # Convert selected date to datetime for comparison
-        selected_date_obj = datetime.strptime(selectedDate, "%Y-%m-%d").date()
-        current_date_obj = datetime.strptime(currentDate, "%Y-%m-%d").date()
-        
         for slot in time_slots:
             if slot['time'] in booked_slots:
                 slot['booked'] = True
                 slot['expired'] = False
             else:
-                slot['booked'] = False
-                
-                # For past dates, all slots are expired
-                if selected_date_obj < current_date_obj:
-                    slot['expired'] = True
-                # For future dates, no slots are expired
-                elif selected_date_obj > current_date_obj:
-                    slot['expired'] = False
-                # For current date, check time
-                else:
-                    slot_hour = slot['hour']
-                    
-                    # Special handling for 12-1 am slot (hour 0)
-                    if slot_hour == 0:
-                        # 12-1 am is for the next day, so it's never expired on the current day
-                        slot['expired'] = False
-                    else:
-                        # For current hour, check if we're more than 15 minutes into the hour
-                        if slot_hour == current_hour:
-                            slot['expired'] = current_minute > 15
-                        else:
-                            slot['expired'] = slot_hour < current_hour
+                slot['expired'] = _slot_is_expired(
+                    selectedDate,
+                    slot['time'],
+                    currentTime,
+                )
+                slot['booked'] = slot['expired']
         
         # Mark slots as booked if they are expired
         for slot in time_slots:
@@ -1448,10 +1454,7 @@ def turfBilling(request):
         messages.error(request, 'The selected booking date is invalid.')
         return redirect('book_now')
 
-    local_now = django_timezone.localtime(
-        django_timezone.now(),
-        ZoneInfo(getattr(settings, 'TURF_TIME_ZONE', settings.TIME_ZONE)),
-    )
+    local_now = _business_now()
     if booking_date < local_now.date():
         messages.error(request, 'You cannot book a slot in the past.')
         return redirect('book_now')
@@ -2500,7 +2503,7 @@ def allBookings(request):
         paid=True,
         cancelled=False,
     ).order_by('selected_date', 'booking_time')
-    currentDate = date.today().strftime("%Y-%m-%d")
+    currentDate = _business_date().strftime("%Y-%m-%d")
     return render(request, 'allBookings.html', {'bookings': bookings, 'currentDate': currentDate})
 
 
@@ -2513,6 +2516,7 @@ def searchBooking(request):
     return render(request, 'allBookings.html', {'bookings': bookings, 'query': query})
 
 
+@never_cache
 def check_slot_status(request):
     """
     API endpoint to check slot availability in real-time
@@ -2523,6 +2527,10 @@ def check_slot_status(request):
     
     if not selected_date:
         return JsonResponse({'error': 'Date parameter is required'}, status=400)
+    try:
+        date.fromisoformat(selected_date)
+    except ValueError:
+        return JsonResponse({'error': 'Date must use YYYY-MM-DD format'}, status=400)
 
     turf_id = request.GET.get('turf_id')
     turf = _active_turf(turf_id)
@@ -2567,10 +2575,17 @@ def check_slot_status(request):
         if slot not in booked_slots:
             booked_slots.append(slot)
 
+    current_time = _business_now()
+    expired_slots = [
+        slot for slot in SLOT_IDS
+        if _slot_is_expired(selected_date, slot, current_time)
+    ]
+
     return JsonResponse({
         'date': selected_date,
         'turf_id': turf.pk,
-        'booked_slots': booked_slots
+        'booked_slots': booked_slots,
+        'expired_slots': expired_slots,
     })
 
 

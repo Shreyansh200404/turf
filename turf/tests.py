@@ -4,7 +4,7 @@ import hmac
 import tempfile
 import re
 from io import BytesIO
-from datetime import datetime, timezone
+from datetime import datetime, timedelta, timezone
 from urllib.error import HTTPError
 from unittest.mock import patch
 
@@ -893,6 +893,68 @@ class MultiTurfManagementTests(TestCase):
         self.assertTrue(default_response.context['time_slots'][0]['booked'])
         self.assertContains(default_response, 'badge bg-secondary">Booked</span>')
         self.assertNotContains(default_response, 'badge bg-secondary">Expired</span>')
+
+    @patch(
+        'turf.views._current_time',
+        return_value=datetime(2030, 1, 1, 20, 0, tzinfo=timezone.utc),
+    )
+    def test_booking_dates_and_slot_expiry_use_turf_timezone(self, current_time):
+        self.client.force_login(self.user)
+
+        response = self.client.get(
+            reverse('turf_details'),
+            {'turf_id': self.default_turf.pk},
+        )
+
+        self.assertEqual(response.context['currentDate'], '2030-01-02')
+        self.assertEqual(response.context['endDate'], '2030-01-08')
+
+        response = self.client.get(
+            reverse('slot_details'),
+            {'date': '2030-01-02', 'turf_id': self.default_turf.pk},
+        )
+
+        self.assertEqual(response.context['currentDate'], '2030-01-02')
+        self.assertFalse(response.context['time_slots'][0]['expired'])
+        self.assertFalse(response.context['time_slots'][0]['booked'])
+
+        response = self.client.get(
+            reverse('slot_details'),
+            {'date': '2030-01-01', 'turf_id': self.default_turf.pk},
+        )
+
+        self.assertTrue(response.context['time_slots'][0]['expired'])
+        self.assertTrue(response.context['time_slots'][0]['booked'])
+
+    def test_live_slot_status_updates_when_checkout_reservation_expires(self):
+        initial_time = datetime(2030, 1, 1, 20, 0, tzinfo=timezone.utc)
+        TurfSlotReservation.objects.create(
+            turf=self.default_turf,
+            selected_date='2030-01-03',
+            slot='6-7 am',
+            reservation_id='active-reservation',
+            expires_at=initial_time + timedelta(minutes=10),
+        )
+
+        with patch('turf.views._current_time', return_value=initial_time):
+            active_response = self.client.get(
+                reverse('check_slot_status'),
+                {'date': '2030-01-03', 'turf_id': self.default_turf.pk},
+            )
+
+        self.assertIn('6-7 am', active_response.json()['booked_slots'])
+        self.assertIn('max-age=0', active_response['Cache-Control'])
+
+        with patch(
+            'turf.views._current_time',
+            return_value=initial_time + timedelta(minutes=11),
+        ):
+            expired_response = self.client.get(
+                reverse('check_slot_status'),
+                {'date': '2030-01-03', 'turf_id': self.default_turf.pk},
+            )
+
+        self.assertNotIn('6-7 am', expired_response.json()['booked_slots'])
 
     @patch('turf.views._razorpay_request')
     def test_checkout_uses_selected_turf_price_and_keeps_turf_in_session(self, razorpay_request):

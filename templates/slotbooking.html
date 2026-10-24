@@ -324,7 +324,7 @@
     <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0-alpha1/dist/js/bootstrap.bundle.min.js"></script>
     <script>
         document.addEventListener('DOMContentLoaded', function() {
-            const timeSlots = document.querySelectorAll('.time-slot:not(.disabled)');
+            const timeSlotsContainer = document.querySelector('.time-slots-container');
             const selectedSlotsContainer = document.getElementById('selected-slots-container');
             const totalPriceElement = document.getElementById('total-price');
             const totalAmountInput = document.getElementById('total-amount');
@@ -355,32 +355,32 @@
                 bookNowBtn.disabled = !(termsCheckbox.checked && selectedSlots.length > 0);
             }
             
-            timeSlots.forEach(slot => {
-                slot.addEventListener('click', function() {
-                    const slotId = this.dataset.id;
-                    const slotTime = this.dataset.time;
-                    const slotPrice = parseInt(this.dataset.price);
-                    
-                    if (this.classList.contains('selected')) {
-                        // Deselect the slot
-                        this.classList.remove('selected');
-                        const index = selectedSlots.findIndex(s => s.id === slotId);
-                        if (index !== -1) {
-                            selectedSlots.splice(index, 1);
-                        }
-                    } else {
-                        // Select the slot
-                        this.classList.add('selected');
-                        selectedSlots.push({
-                            id: slotId,
-                            time: slotTime,
-                            price: slotPrice
-                        });
+            timeSlotsContainer.addEventListener('click', function(event) {
+                const slot = event.target.closest('.time-slot');
+                if (!slot || slot.classList.contains('disabled')) {
+                    return;
+                }
+
+                const slotId = slot.dataset.id;
+                const slotTime = slot.dataset.time;
+                const slotPrice = parseInt(slot.dataset.price, 10);
+
+                if (slot.classList.contains('selected')) {
+                    slot.classList.remove('selected');
+                    const index = selectedSlots.findIndex(s => s.id === slotId);
+                    if (index !== -1) {
+                        selectedSlots.splice(index, 1);
                     }
-                    
-                    // Update the booking summary
-                    updateBookingSummary();
-                });
+                } else {
+                    slot.classList.add('selected');
+                    selectedSlots.push({
+                        id: slotId,
+                        time: slotTime,
+                        price: slotPrice
+                    });
+                }
+
+                updateBookingSummary();
             });
             
             function updateBookingSummary() {
@@ -427,13 +427,18 @@
             function checkForBookedSlots() {
                 const selectedDate = "{{ selectedDate }}";
                 
-                // Create a fetch request to check slot status
-                fetch(`/check_slot_status/?date=${selectedDate}&turf_id={{ turf.pk }}`)
+                const statusUrl = new URL("{% url 'check_slot_status' %}", window.location.origin);
+                statusUrl.searchParams.set('date', selectedDate);
+                statusUrl.searchParams.set('turf_id', '{{ turf.pk }}');
+
+                fetch(statusUrl, { cache: 'no-store' })
                     .then(response => response.json())
                     .then(data => {
                         if (data.booked_slots && Array.isArray(data.booked_slots)) {
-                            // Update the UI based on booked slots
-                            updateSlotAvailability(data.booked_slots);
+                            updateSlotAvailability(
+                                data.booked_slots,
+                                data.expired_slots || [],
+                            );
                         }
                     })
                     .catch(error => {
@@ -442,39 +447,42 @@
             }
 
             // Function to update the UI based on booked slots
-            function updateSlotAvailability(bookedSlots) {
+            function updateSlotAvailability(bookedSlots, expiredSlots) {
                 const allSlotElements = document.querySelectorAll('.time-slot');
-                
+                let selectionChanged = false;
+
                 allSlotElements.forEach(slotElement => {
                     const slotTime = slotElement.dataset.time;
-                    
-                    // If the slot is in the booked list but not already marked as disabled
-                    if (bookedSlots.includes(slotTime) && !slotElement.classList.contains('disabled')) {
-                        // If this slot was selected, remove it from selection
-                        if (slotElement.classList.contains('selected')) {
-                            slotElement.classList.remove('selected');
-                            const index = selectedSlots.findIndex(s => s.time === slotTime);
-                            if (index !== -1) {
-                                selectedSlots.splice(index, 1);
-                            }
-                            // Update booking summary to reflect changes
-                            updateBookingSummary();
+                    const isBooked = bookedSlots.includes(slotTime);
+                    const isExpired = !isBooked && expiredSlots.includes(slotTime);
+                    const isUnavailable = isBooked || isExpired;
+
+                    if (isUnavailable && slotElement.classList.contains('selected')) {
+                        slotElement.classList.remove('selected');
+                        const index = selectedSlots.findIndex(s => s.time === slotTime);
+                        if (index !== -1) {
+                            selectedSlots.splice(index, 1);
+                            selectionChanged = true;
                         }
-                        
-                        // Mark as booked
-                        slotElement.classList.add('disabled');
-                        
-                        // Update the icon to show it's booked
-                        const iconContainer = slotElement.querySelector('div > div:last-child');
-                        if (iconContainer) {
-                            iconContainer.innerHTML = '<span class="badge bg-secondary">Booked</span>';
+                    }
+
+                    slotElement.classList.toggle('disabled', isUnavailable);
+                    slotElement.setAttribute('aria-disabled', String(isUnavailable));
+
+                    const iconContainer = slotElement.querySelector('.d-flex > div:last-child');
+                    if (iconContainer) {
+                        if (isBooked || isExpired) {
+                            const status = isBooked ? 'Booked' : 'Expired';
+                            iconContainer.innerHTML = `<span class="badge bg-secondary">${status}</span>`;
+                        } else {
+                            iconContainer.innerHTML = '<i class="far fa-clock"></i>';
                         }
-                        
-                        // Remove event listeners by cloning and replacing
-                        const newSlot = slotElement.cloneNode(true);
-                        slotElement.parentNode.replaceChild(newSlot, slotElement);
                     }
                 });
+
+                if (selectionChanged) {
+                    updateBookingSummary();
+                }
             }
 
             // Check slot availability every 10 seconds
