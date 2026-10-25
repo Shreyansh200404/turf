@@ -111,6 +111,22 @@ WSGI_APPLICATION = 'SKSportsPark.wsgi.application'
 
 
 
+# DATABASES = {
+#     'default': {
+#         'ENGINE': 'django.db.backends.mysql',
+#         'NAME': 'turfdb',
+#         'USER': 'shreyansh',
+#         'PASSWORD': os.environ.get('DB_PASSWORD'),  # Use environment variable for password
+#         'HOST': 'skturfdb2026.mysql.database.azure.com',
+#         'PORT': '3306',
+#         'OPTIONS': {
+#             'charset': 'utf8mb4',
+#         },
+#     }
+# }
+
+
+
 DATABASES = {
     'default': {
         'ENGINE': 'django.db.backends.mysql',
